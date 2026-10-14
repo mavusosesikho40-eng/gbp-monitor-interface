@@ -2,13 +2,12 @@
 
 A dashboard for [gbp-monitor](https://github.com/mavusosesikho40-eng/gbp-monitor), the script that watches a Google Business Profile listing for unauthorised changes.
 
-It shows:
+It has two views, switched at the top of the page:
 
-- **Current state**: listing matches, change detected, check failing, no recent checks, or setup needed
-- **Trusted listing**: the fields saved in `baseline.json`, with the live value next to any field that has changed
-- **Check history**: every entry in `change_log.jsonl`, with before/after values for changes
-- **Monitor runs**: recent GitHub Actions runs, plus a button to start a check now
-- **Setup checklist**: workflow registered, baseline saved, secrets present, first check done
+- **Restaurant**: for the owner and staff. A plain answer ("Your listing is safe" or "Your Google listing was changed"), the time until the next check, the approved name, phone, website and address, and step-by-step instructions when something changes.
+- **Operator**: for whoever runs the monitor. Status, setup progress (workflow, secrets, baseline, first check), recent GitHub Actions runs, the full check log with before/after values, a "Run check now" button, and the GitHub connection.
+
+Link straight to a view with `#restaurant` or `#operator` at the end of the URL. Without a connection the page shows example data, and you can preview the "listing changed" and "not set up" states.
 
 It's a single static `index.html` with no build step and no server.
 

@@ -7,255 +7,301 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap">
 <style>
-/* Layout: one column of state → trusted listing + schedule side by side → check history → monitor runs → setup checklist */
+/* Layout: app bar with audience switch → one narrow column per audience. Restaurant: status hero, check progress, details, activity. Operator: status + actions, setup steps, runs, full log, connection. */
 :root {
-  --bg: #f3f5f4;
-  --surface: #ffffff;
-  --ink: #17211f;
-  --muted: #5d6b67;
-  --line: #d9e0dd;
-  --accent: #0d6b5e;
-  --accent-ink: #ffffff;
-  --ok: #1d7a46;      --ok-bg: #e3f3e9;
-  --warn: #9a5b00;    --warn-bg: #fbf0dc;
-  --bad: #b3261e;     --bad-bg: #fbe5e2;
-  --idle: #4f5d75;    --idle-bg: #e7ebf2;
-  --was: #fbe5e2;     --now: #e3f3e9;
-  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --radius: 10px;
+  --bg: #ffffff;
+  --surface: #f3f3f3;
+  --surface-2: #e8e8e8;
+  --ink: #000000;
+  --muted: #5e5e5e;
+  --line: #e2e2e2;
+  --btn: #000000;      --btn-ink: #ffffff;
+  --ok: #05944f;       --ok-bg: #e6f2ec;
+  --bad: #e11900;      --bad-bg: #fde9e7;
+  --warn: #b26b00;     --warn-bg: #fff3d6;
+  --info: #276ef1;     --info-bg: #e8effd;
+  --font: "DM Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --r: 12px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1514; --surface: #172020; --ink: #e6eeeb; --muted: #9aaaa5; --line: #2a3634;
-    --accent: #3fb8a3; --accent-ink: #06231e;
-    --ok: #6fd39a; --ok-bg: #143323; --warn: #f0b75c; --warn-bg: #3a2a10;
-    --bad: #ff8a80; --bad-bg: #3d1915; --idle: #a9b6cf; --idle-bg: #232b3a;
-    --was: #3d1915; --now: #143323;
+    --bg: #000000; --surface: #161616; --surface-2: #262626; --ink: #ffffff; --muted: #a6a6a6; --line: #2b2b2b;
+    --btn: #ffffff; --btn-ink: #000000;
+    --ok: #3cc47c; --ok-bg: #0d2a1b; --bad: #ff6a55; --bad-bg: #331410; --warn: #ffc043; --warn-bg: #33270c; --info: #6b9cff; --info-bg: #111d38;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f1514; --surface: #172020; --ink: #e6eeeb; --muted: #9aaaa5; --line: #2a3634;
-  --accent: #3fb8a3; --accent-ink: #06231e;
-  --ok: #6fd39a; --ok-bg: #143323; --warn: #f0b75c; --warn-bg: #3a2a10;
-  --bad: #ff8a80; --bad-bg: #3d1915; --idle: #a9b6cf; --idle-bg: #232b3a;
-  --was: #3d1915; --now: #143323;
+  --bg: #000000; --surface: #161616; --surface-2: #262626; --ink: #ffffff; --muted: #a6a6a6; --line: #2b2b2b;
+  --btn: #ffffff; --btn-ink: #000000;
+  --ok: #3cc47c; --ok-bg: #0d2a1b; --bad: #ff6a55; --bad-bg: #331410; --warn: #ffc043; --warn-bg: #33270c; --info: #6b9cff; --info-bg: #111d38;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }
-body {
-  background: var(--bg); color: var(--ink);
-  font: 15px/1.55 var(--font-body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 24px 48px;
-}
-.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
-h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
-h1 { font-size: 1.35rem; font-weight: 700; }
-h2 { font-size: 1.05rem; font-weight: 700; }
-.label { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.mono { font-family: var(--font-mono); font-size: .85em; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; text-wrap: balance; }
+h2 { font-size: 1.25rem; }
+p { margin: 0; }
+a { color: inherit; }
 .muted { color: var(--muted); }
-a { color: var(--accent); }
-button, .btn {
-  font: 600 .88rem var(--font-body); border-radius: 8px; padding: 8px 14px; cursor: pointer;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
-}
-button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-button:disabled { opacity: .55; cursor: default; }
-button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.col { max-width: 720px; margin: 0 auto; }
+.col.wide { max-width: 1040px; }
+svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* top bar */
-.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.pin { width: 30px; height: 30px; flex: none; }
-.top .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.demo-chip { font: 600 .72rem var(--font-body); letter-spacing: .06em; text-transform: uppercase;
-  padding: 4px 9px; border-radius: 99px; background: var(--idle-bg); color: var(--idle); }
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px;
+  border-radius: 8px; border: 0; font: 500 1rem var(--font); cursor: pointer; text-decoration: none;
+  background: var(--btn); color: var(--btn-ink); }
+.btn.secondary { background: var(--surface); color: var(--ink); }
+.btn.small { min-height: 36px; padding: 0 14px; font-size: .9rem; border-radius: 999px; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn:focus-visible, .seg button:focus-visible, input:focus-visible, select:focus-visible, .rowbtn:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
 
-/* state banner */
-.state { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
-  padding: 20px 22px; border-radius: var(--radius); background: var(--s-bg); color: var(--ink);
-  border: 1px solid color-mix(in srgb, var(--s-fg) 30%, transparent); }
-.state[data-s="ok"]   { --s-fg: var(--ok);   --s-bg: var(--ok-bg); }
-.state[data-s="warn"] { --s-fg: var(--warn); --s-bg: var(--warn-bg); }
-.state[data-s="bad"]  { --s-fg: var(--bad);  --s-bg: var(--bad-bg); }
-.state[data-s="idle"] { --s-fg: var(--idle); --s-bg: var(--idle-bg); }
-.state .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--s-fg); margin-top: 8px;
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--s-fg) 22%, transparent); }
-.state h2 { font-size: 1.6rem; color: var(--s-fg); }
-.state p { margin: 6px 0 0; max-width: 68ch; }
-.state .meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .85rem; color: var(--muted); }
+/* app bar */
+.appbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.appbar .inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; flex-wrap: wrap; }
+.wordmark { font-weight: 700; font-size: 1.25rem; letter-spacing: -0.03em; }
+.seg { display: inline-flex; background: var(--surface); border-radius: 999px; padding: 4px; }
+.seg button { font: 500 .95rem var(--font); border: 0; background: transparent; color: var(--ink); padding: 8px 16px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.seg button[aria-pressed="true"] { background: var(--btn); color: var(--btn-ink); }
+.seg svg.i { width: 18px; height: 18px; }
+.example-bar { background: var(--info-bg); color: var(--info); font-size: .9rem; }
+.example-bar .inner { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding-block: 10px; }
+.example-bar select { font: 500 .9rem var(--font); border-radius: 999px; border: 0; padding: 6px 10px; margin-left: 6px; background: var(--bg); color: var(--ink); }
+.example-bar button { font: 500 .9rem var(--font); background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; padding: 0; }
 
-/* panels */
-.grid2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
-@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; min-width: 0; }
-.panel > header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+main { padding-block: 24px 64px; }
+.stack { display: grid; gap: 28px; }
 
-.fields { display: grid; gap: 0; margin: 0; }
-.fields > div { display: grid; grid-template-columns: 9rem 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
-.fields > div:first-child { border-top: 0; }
-.fields dt { margin: 0; }
-.fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-@media (max-width: 480px) { .fields > div { grid-template-columns: 1fr; gap: 2px; } }
+/* hero */
+.hero { display: grid; gap: 14px; }
+.badge { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--s-bg); color: var(--s-fg); }
+.badge svg.i { width: 28px; height: 28px; stroke-width: 2.4; }
+[data-s="ok"]   { --s-fg: var(--ok);   --s-bg: var(--ok-bg); }
+[data-s="bad"]  { --s-fg: var(--bad);  --s-bg: var(--bad-bg); }
+[data-s="warn"] { --s-fg: var(--warn); --s-bg: var(--warn-bg); }
+[data-s="idle"] { --s-fg: var(--info); --s-bg: var(--info-bg); }
+.hero h1 { font-size: clamp(2rem, 7vw, 2.75rem); }
+.hero p { font-size: 1.1rem; color: var(--muted); max-width: 52ch; }
 
-.sched { display: grid; gap: 14px; }
-.big-time { font: 700 1.9rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
-.slots { display: flex; gap: 8px; flex-wrap: wrap; }
-.slot { font: 500 .8rem var(--font-mono); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
+/* ETA card */
+.eta { background: var(--surface); border-radius: var(--r); padding: 18px 20px; display: grid; gap: 14px; }
+.eta .ends { display: flex; justify-content: space-between; gap: 12px; }
+.eta .ends div:last-child { text-align: right; }
+.eta .t { font-weight: 700; font-size: 1.35rem; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.eta .k { font-size: .85rem; color: var(--muted); }
+.track { position: relative; height: 6px; background: var(--surface-2); border-radius: 3px; margin-inline: 8px; }
+.track .fill { position: absolute; inset: 0 auto 0 0; background: var(--ink); border-radius: 3px; }
+.track .car { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); border: 4px solid var(--ink); transform: translate(-50%, -50%); }
 
-/* history strip */
-.strip { display: flex; gap: 3px; align-items: flex-end; height: 34px; margin: 4px 0 14px; overflow: hidden; }
-.strip i { flex: 1 1 0; min-width: 2px; height: 100%; border-radius: 2px; background: var(--ok); opacity: .75; }
-.strip i.changed { background: var(--bad); opacity: 1; }
-.strip-axis { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-top: -10px; margin-bottom: 10px; }
+/* alert card */
+.alert { border-radius: var(--r); padding: 20px; background: var(--bad-bg); display: grid; gap: 16px; }
+.alert h2 { color: var(--bad); }
+.cmp { display: grid; gap: 12px; }
+.cmp .f { background: var(--bg); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; }
+.cmp .lab { font-size: .85rem; font-weight: 700; }
+.cmp .pair { display: grid; grid-template-columns: 7rem 1fr; gap: 4px 10px; font-size: .95rem; }
+.cmp .pair > span:nth-child(odd) { color: var(--muted); }
+.cmp .pair .was { text-decoration: line-through; color: var(--muted); overflow-wrap: anywhere; }
+.cmp .pair .now { font-weight: 700; overflow-wrap: anywhere; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; counter-increment: s; }
+.steps li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
 
-.log { list-style: none; margin: 0; padding: 0; display: grid; }
-.log li { display: grid; grid-template-columns: 10rem 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
-.log li:first-child { border-top: 0; }
-.log time { white-space: nowrap; font: 500 .8rem/1.6 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
-.pill { display: inline-block; font: 600 .74rem var(--font-body); padding: 2px 8px; border-radius: 99px; }
-.pill.ok { background: var(--ok-bg); color: var(--ok); }
-.pill.bad { background: var(--bad-bg); color: var(--bad); }
-.pill.warn { background: var(--warn-bg); color: var(--warn); }
-.pill.idle { background: var(--idle-bg); color: var(--idle); }
-.diff { margin-top: 8px; display: grid; gap: 8px; }
-.diff .row { display: grid; gap: 4px; }
-.diff .v { font: .85rem var(--font-mono); padding: 4px 8px; border-radius: 6px; overflow-wrap: anywhere; }
-.diff .was { background: var(--was); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--bad) 60%, transparent); }
-.diff .now { background: var(--now); }
-@media (max-width: 480px) { .log li { grid-template-columns: 1fr; gap: 4px; } }
-.more { margin-top: 10px; }
+/* list rows */
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rows li:last-child { border-bottom: 0; }
+.rows li.day { display: block; border: 0; padding: 16px 0 0; font-size: .85rem; font-weight: 700; color: var(--muted); }
+.ico { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; }
+.rows .k { font-size: .85rem; color: var(--muted); }
+.rows .v { font-weight: 500; overflow-wrap: anywhere; }
+.rows > li > div { min-width: 0; }
+.tag { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; background: var(--s-bg); color: var(--s-fg); }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
 
-.runs { width: 100%; border-collapse: collapse; font-size: .88rem; }
-.runs th { text-align: left; font-weight: 600; color: var(--muted); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--line); }
-.runs td { padding: 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.table-wrap { overflow-x: auto; }
+/* operator */
+.op-status { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+.op-status > div { min-width: 0; }
+.op-status h1 { font-size: 1.9rem; }
+.op-status p { color: var(--muted); margin-top: 6px; max-width: 64ch; }
+@media (max-width: 480px) { .op-status { grid-template-columns: 1fr; } }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip { background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+@media (max-width: 820px) { .grid2 { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border-radius: var(--r); padding: 20px; min-width: 0; }
+.card .rows li { border-color: var(--surface-2); }
+.card .ico { background: var(--bg); }
+.progress { display: flex; gap: 4px; margin: 10px 0 4px; }
+.progress i { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); }
+.progress i.on { background: var(--ok); }
+.setup li { grid-template-columns: 44px 1fr; align-items: start; }
+.setup .sub { color: var(--muted); font-size: .92rem; }
+code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: .85em; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+.card code { background: var(--bg); }
+.log-diff { display: grid; gap: 6px; margin-top: 4px; }
+.log-diff div { font-size: .9rem; overflow-wrap: anywhere; }
+.log-diff s { color: var(--muted); }
+.rowbtn { background: none; border: 0; padding: 0; font: 500 .95rem var(--font); color: var(--ink); text-decoration: underline; cursor: pointer; }
 
-.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.checklist li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
-.mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 700 .75rem var(--font-body); }
-.mark.ok { background: var(--ok-bg); color: var(--ok); }
-.mark.bad { background: var(--bad-bg); color: var(--bad); }
-.mark.unk { background: var(--idle-bg); color: var(--idle); }
-.checklist p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
-code { font-family: var(--font-mono); font-size: .85em; background: color-mix(in srgb, var(--line) 55%, transparent); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
-
-/* connect dialog */
-.connect { display: grid; gap: 12px; }
-.connect label { display: grid; gap: 4px; font-weight: 600; font-size: .88rem; }
-.connect input[type=text], .connect input[type=password] {
-  font: .9rem var(--font-mono); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--bg); color: var(--ink); width: 100%;
-}
-.connect .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.connect .check { display: flex; gap: 8px; align-items: center; font-weight: 500; }
-.note { font-size: .85rem; color: var(--muted); margin: 0; max-width: 70ch; }
-.toast { padding: 10px 14px; border-radius: 8px; font-size: .9rem; }
+.toast { border-radius: 10px; padding: 12px 16px; font-weight: 500; }
 .toast.bad { background: var(--bad-bg); color: var(--bad); }
 .toast.ok { background: var(--ok-bg); color: var(--ok); }
-footer { font-size: .8rem; color: var(--muted); }
-@media (prefers-reduced-motion: no-preference) { .state .dot { transition: background .3s; } }
+
+/* bottom sheet */
+.scrim { position: fixed; inset: 0; z-index: 20; background: rgb(0 0 0 / .5); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--bg); width: 100%; max-width: 560px; border-radius: 16px 16px 0 0; display: grid; gap: 14px; max-height: 92%; overflow-y: auto;
+  padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--surface-2); margin: 0 auto 6px; }
+@media (min-width: 640px) { .scrim { align-items: center; } .sheet { border-radius: 16px; padding-bottom: 24px; } .sheet .grab { display: none; } }
+.sheet label { display: grid; gap: 6px; font-weight: 500; }
+.sheet input[type=text], .sheet input[type=password] { font: 1rem var(--font); min-height: 48px; padding: 0 14px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); color: var(--ink); width: 100%; }
+.sheet input:focus { border-color: var(--ink); outline: none; }
+.sheet label.check { display: flex; gap: 10px; align-items: center; }
+.sheet .note { font-size: .9rem; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .track .fill, .track .car { transition: width .6s ease, left .6s ease; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <div class="brand">
-      <svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Z"/><path fill="var(--surface)" d="m10.6 12.6-2-2-1.2 1.2 3.2 3.2 5.8-5.8-1.2-1.2z"/></svg>
-      <div>
-        <h1 id="bizName">Listing Watch</h1>
-        <div class="muted" style="font-size:.85rem" id="repoLine">Google Business Profile monitor</div>
-      </div>
-    </div>
-    <div class="actions">
-      <span class="demo-chip" id="demoChip" hidden>Example data</span>
-      <button id="refreshBtn" type="button">Refresh</button>
-      <button id="runBtn" type="button" class="primary">Run check now</button>
-      <button id="connectBtn" type="button">Connect</button>
-    </div>
-  </div>
 
-  <div id="toast" class="toast" hidden></div>
+<header class="appbar">
+  <div class="gutter"><div class="col wide inner">
+    <span class="wordmark">Listing Watch</span>
+    <div class="seg" role="group" aria-label="Choose view">
+      <button type="button" id="segRestaurant" aria-pressed="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/></svg>Restaurant</button>
+      <button type="button" id="segOperator" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Operator</button>
+    </div>
+  </div></div>
+</header>
 
-  <section class="panel connect" id="connectPanel" hidden aria-label="Connect to GitHub">
-    <h2>Connect to your monitor repo</h2>
-    <p class="note">The monitor stores its baseline and check log in a private GitHub repo, so this page needs a GitHub token to read it. Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a> for that one repo with <b>Contents: read</b> and <b>Actions: read</b>. Add <b>Actions: write</b> if you want the “Run check now” button, and <b>Secrets: read</b> to let the checklist confirm your secrets are set. The token is only sent to api.github.com.</p>
-    <label for="repoInput">Monitor repo
-      <input type="text" id="repoInput" autocomplete="off" spellcheck="false" placeholder="owner/repo">
+<div class="example-bar" id="exampleBar" hidden>
+  <div class="gutter"><div class="col wide inner">
+    <span><b>Example data.</b> This isn’t your real listing yet.</span>
+    <label for="scenario">Preview
+      <select id="scenario">
+        <option value="ok">Everything fine</option>
+        <option value="changed">Listing changed</option>
+        <option value="setup">Not set up yet</option>
+      </select>
     </label>
-    <label for="tokenInput">GitHub token
-      <input type="password" id="tokenInput" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
-    </label>
-    <div class="row">
-      <label class="check" for="rememberInput"><input type="checkbox" id="rememberInput"> Remember on this device</label>
-    </div>
-    <div class="row">
-      <button type="button" class="primary" id="saveConnect">Connect</button>
-      <button type="button" id="cancelConnect">Cancel</button>
-      <button type="button" id="forgetConnect">Disconnect and use example data</button>
-    </div>
-  </section>
+    <button type="button" id="exampleConnect">Connect your monitor</button>
+  </div></div>
+</div>
 
-  <section class="state" id="state" data-s="idle" aria-live="polite">
-    <span class="dot" aria-hidden="true"></span>
-    <div>
-      <h2 id="stateTitle">Loading…</h2>
-      <p id="stateText"></p>
-      <div class="meta" id="stateMeta"></div>
-    </div>
-  </section>
+<!-- ============ RESTAURANT ============ -->
+<main id="restaurantView" class="gutter">
+  <div class="col stack">
+    <div id="toastR" class="toast" hidden></div>
 
-  <div class="grid2">
-    <section class="panel">
-      <header><h2>Trusted listing</h2><span class="label" id="baselineSrc">baseline.json</span></header>
-      <dl class="fields" id="fields"></dl>
+    <section class="hero" id="rHero" data-s="idle" aria-live="polite">
+      <div class="badge" id="rBadge"></div>
+      <h1 id="rTitle">Loading…</h1>
+      <p id="rText"></p>
+      <div class="btn-row" id="rActions"></div>
     </section>
-    <section class="panel sched">
-      <header style="margin:0"><h2>Schedule</h2><span class="label">Twice daily</span></header>
-      <div>
-        <div class="label">Next scheduled check</div>
-        <div class="big-time" id="nextTime">—</div>
-        <div class="muted" id="nextRel"></div>
+
+    <section class="eta" id="rEta" hidden aria-label="Check timing">
+      <div class="ends">
+        <div><div class="k">Last checked</div><div class="t" id="etaLast">—</div></div>
+        <div><div class="k">Next check</div><div class="t" id="etaNext">—</div></div>
       </div>
-      <div>
-        <div class="label" style="margin-bottom:6px">Check times</div>
-        <div class="slots" id="slots"></div>
-      </div>
-      <p class="note">GitHub can start scheduled runs up to about 30 minutes late when it is busy.</p>
+      <div class="track" aria-hidden="true"><div class="fill" id="etaFill"></div><div class="car" id="etaCar"></div></div>
+      <div class="k" id="etaNote"></div>
+    </section>
+
+    <section class="alert" id="rChange" hidden>
+      <h2>What changed</h2>
+      <div class="cmp" id="rCmp"></div>
+      <h2 style="color:var(--ink)">What to do now</h2>
+      <ol class="steps">
+        <li><div><b>Open Google Business Profile</b><div class="muted">Sign in with the account that manages your restaurant.</div></div></li>
+        <li><div><b>Put back the correct details</b><div class="muted">Use the “Approved” values above. If you can’t edit the listing, use “Get support” in Business Profile and report it.</div></div></li>
+        <li><div><b>Tell your operator</b><div class="muted">If you made the change on purpose, they need to save it as the new approved version.</div></div></li>
+      </ol>
+      <div class="btn-row"><a class="btn" href="https://business.google.com/" target="_blank" rel="noopener">Open Google Business Profile</a></div>
+    </section>
+
+    <section aria-labelledby="rDetailsH">
+      <div class="section-head"><h2 id="rDetailsH">Your approved details</h2></div>
+      <p class="muted" style="margin-bottom:6px">Every check compares your Google listing against these.</p>
+      <ul class="rows" id="rFields"></ul>
+    </section>
+
+    <section aria-labelledby="rActH">
+      <div class="section-head"><h2 id="rActH">Recent activity</h2><button type="button" class="rowbtn" id="rMore" hidden>See all</button></div>
+      <ul class="rows" id="rActivity"></ul>
     </section>
   </div>
+</main>
 
-  <section class="panel">
-    <header><h2>Check history</h2><span class="label" id="histCount"></span></header>
-    <div class="strip" id="strip" aria-hidden="true"></div>
-    <div class="strip-axis" id="stripAxis"></div>
-    <ul class="log" id="log"></ul>
-    <button type="button" class="more" id="moreBtn" hidden>Show older checks</button>
-  </section>
+<!-- ============ OPERATOR ============ -->
+<main id="operatorView" class="gutter" hidden>
+  <div class="col wide stack">
+    <div id="toastO" class="toast" hidden></div>
 
-  <div class="grid2">
-    <section class="panel">
-      <header><h2>Monitor runs</h2><a id="actionsLink" class="label" href="#" target="_blank" rel="noopener">Open in GitHub</a></header>
-      <div class="table-wrap"><table class="runs"><thead><tr><th>Started</th><th>Trigger</th><th>Result</th><th>Took</th></tr></thead><tbody id="runs"></tbody></table></div>
+    <section class="op-status" id="oStatus" data-s="idle" aria-live="polite">
+      <div class="badge" id="oBadge"></div>
+      <div>
+        <h1 id="oTitle">Loading…</h1>
+        <p id="oText"></p>
+        <div class="chips" id="oChips"></div>
+        <div class="btn-row" style="margin-top:16px">
+          <button type="button" class="btn" id="runBtn">Run check now</button>
+          <button type="button" class="btn secondary" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
     </section>
-    <section class="panel">
-      <header><h2>Setup checklist</h2></header>
-      <ul class="checklist" id="checklist"></ul>
+
+    <div class="grid2">
+      <section class="card" aria-labelledby="setupH">
+        <h2 id="setupH">Setup</h2>
+        <div class="progress" id="setupBar" aria-hidden="true"></div>
+        <div class="muted" id="setupCount" style="font-size:.9rem"></div>
+        <ul class="rows setup" id="setup"></ul>
+      </section>
+      <section class="card" aria-labelledby="runsH">
+        <div class="section-head"><h2 id="runsH">Recent runs</h2><a class="rowbtn" id="actionsLink" href="#" target="_blank" rel="noopener">Open in GitHub</a></div>
+        <ul class="rows" id="runs"></ul>
+      </section>
+    </div>
+
+    <section aria-labelledby="logH">
+      <div class="section-head"><h2 id="logH">Check log</h2><span class="muted" id="logCount"></span></div>
+      <ul class="rows" id="log"></ul>
+      <button type="button" class="btn secondary small" id="logMore" hidden style="margin-top:12px">Show all</button>
+    </section>
+
+    <section class="card" aria-labelledby="connH">
+      <div class="section-head"><h2 id="connH">Connection</h2><button type="button" class="btn small" id="connectBtn">Change</button></div>
+      <ul class="rows" id="conn"></ul>
     </section>
   </div>
+</main>
 
-  <footer>Watches the business name, phone numbers, website and address. If something changes that you didn’t change, report it in Google Business Profile straight away, then run <code>python listing_monitor.py --init</code> once the listing is correct again.</footer>
+<div class="scrim" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetH">
+    <div class="grab"></div>
+    <h2 id="sheetH">Connect your monitor</h2>
+    <p class="note">Your monitor keeps its records in a private GitHub repo. Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a> for that repo with <b>Contents: read</b> and <b>Actions: read</b>. Add <b>Actions: write</b> for “Run check now” and <b>Secrets: read</b> for the setup check. The token is only sent to GitHub.</p>
+    <label for="repoInput">Monitor repo<input type="text" id="repoInput" autocomplete="off" spellcheck="false" placeholder="owner/repo"></label>
+    <label for="tokenInput">GitHub token<input type="password" id="tokenInput" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+    <label class="check" for="rememberInput"><input type="checkbox" id="rememberInput"> Remember on this device</label>
+    <div id="sheetErr" class="toast bad" hidden></div>
+    <button type="button" class="btn" id="saveConnect">Connect</button>
+    <div class="btn-row">
+      <button type="button" class="btn secondary" id="cancelConnect" style="flex:1">Cancel</button>
+      <button type="button" class="btn secondary" id="forgetConnect" style="flex:1">Use example data</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -263,47 +309,71 @@ footer { font-size: .8rem; color: var(--muted); }
   const DEFAULT_REPO = "mavusosesikho40-eng/gbp-monitor";
   const CRON_HOURS_UTC = [6, 18];
   const STALE_HOURS = 13;
-  const FIELD_LABELS = { title: "Business name", phoneNumbers: "Phone", websiteUri: "Website", storefrontAddress: "Address" };
+  const FIELD_LABELS = { title: "Name", phoneNumbers: "Phone", websiteUri: "Website", storefrontAddress: "Address" };
   const FIELDS = Object.keys(FIELD_LABELS);
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  /* ---------- storage (best effort) ---------- */
+  const P = {
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    alert: '<path d="M12 9v4M12 16.5v.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+    pause: '<path d="M9 6v12M15 6v12"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    store: '<path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/>',
+    phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2Z"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+    pin: '<path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/>',
+    play: '<path d="M8 5v14l11-7Z"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    q: '<path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17v.01"/>',
+    repo: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z"/><path d="M5 17a3 3 0 0 1 3-3h11"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3"/>',
+  };
+  const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+  const FIELD_ICON = { title: "store", phoneNumbers: "phone", websiteUri: "globe", storefrontAddress: "pin" };
+
+  /* ---------- storage ---------- */
   const store = {
     get(k) { try { return localStorage.getItem(k) ?? sessionStorage.getItem(k); } catch { return null; } },
-    set(k, v, remember) {
-      try { (remember ? localStorage : sessionStorage).setItem(k, v); (remember ? sessionStorage : localStorage).removeItem(k); } catch {}
-    },
+    set(k, v, remember) { try { (remember ? localStorage : sessionStorage).setItem(k, v); (remember ? sessionStorage : localStorage).removeItem(k); } catch {} },
     del(k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch {} },
   };
+  const remembered = () => { try { return !!localStorage.getItem("lw.token"); } catch { return false; } };
   let conn = { repo: store.get("lw.repo") || DEFAULT_REPO, token: store.get("lw.token") || "" };
+  const hashView = location.hash.slice(1);
+  let view = ["restaurant", "operator"].includes(hashView) ? hashView : (store.get("lw.view") || "restaurant");
+  let scenario = "ok";
 
   /* ---------- formatting ---------- */
   function fmtField(field, v) {
-    if (v == null || v === "") return "(not set)";
-    if (field === "phoneNumbers") {
-      return [v.primaryPhone, ...(v.additionalPhones || [])].filter(Boolean).join(", ") || "(not set)";
-    }
-    if (field === "storefrontAddress") {
-      return [...(v.addressLines || []), v.sublocality, v.locality, v.administrativeArea, v.postalCode, v.regionCode]
-        .filter(Boolean).join(", ") || "(not set)";
-    }
+    if (v == null || v === "") return "Not set";
+    if (field === "phoneNumbers") return [v.primaryPhone, ...(v.additionalPhones || [])].filter(Boolean).join(", ") || "Not set";
+    if (field === "storefrontAddress") return [...(v.addressLines || []), v.sublocality, v.locality, v.administrativeArea, v.postalCode, v.regionCode].filter(Boolean).join(", ") || "Not set";
     return typeof v === "string" ? v : JSON.stringify(v);
   }
-  const dtf = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  const tf = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
-  const fmtDate = (d) => dtf.format(new Date(d));
+  const tf = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+  const df = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const dtf = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  const fmtTime = (d) => tf.format(new Date(d));
+  const fmtDT = (d) => dtf.format(new Date(d));
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  function dayLabel(d) {
+    const a = new Date(d), n = new Date(), y = new Date(), t = new Date();
+    y.setDate(n.getDate() - 1); t.setDate(n.getDate() + 1);
+    if (sameDay(a, n)) return "Today";
+    if (sameDay(a, y)) return "Yesterday";
+    if (sameDay(a, t)) return "Tomorrow";
+    return df.format(a);
+  }
+  const nextText = (t) => (dayLabel(t) === "Today" ? fmtTime(t) : `${dayLabel(t)} ${fmtTime(t)}`);
   function rel(d) {
     const s = (new Date(d) - Date.now()) / 1000, a = Math.abs(s);
-    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-    if (a < 3600) return rtf.format(Math.round(s / 60), "minute");
-    if (a < 86400 * 2) return rtf.format(Math.round(s / 3600), "hour");
-    return rtf.format(Math.round(s / 86400), "day");
+    const r = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+    if (a < 3600) return r.format(Math.round(s / 60), "minute");
+    if (a < 86400 * 2) return r.format(Math.round(s / 3600), "hour");
+    return r.format(Math.round(s / 86400), "day");
   }
-  function dur(a, b) {
-    const s = Math.max(0, Math.round((new Date(b) - new Date(a)) / 1000));
-    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-  }
+  const dur = (a, b) => { const s = Math.max(0, Math.round((new Date(b) - new Date(a)) / 1000)); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`; };
   function nextRun(now = new Date()) {
     const c = [];
     for (let d = 0; d < 2; d++) for (const h of CRON_HOURS_UTC) {
@@ -314,7 +384,7 @@ footer { font-size: .8rem; color: var(--muted); }
   }
 
   /* ---------- example data ---------- */
-  function demoData() {
+  function demoData(kind) {
     const now = Date.now(), H = 3600e3;
     const baseline = {
       title: "VLAMO Restaurant",
@@ -326,24 +396,27 @@ footer { font-size: .8rem; color: var(--muted); }
     const log = [];
     for (let i = 0; i < 28; i++) {
       const t = new Date(last.getTime() - i * 12 * H + (4 + (i * 7) % 11) * 60e3);
-      const changed = i === 5;
-      log.push({
-        timestamp: t.toISOString(), status: changed ? "changed" : "ok",
-        changes: changed ? [{ field: "websiteUri", was: baseline.websiteUri, now: "https://vlamo-bookings.example.net" }] : [],
-      });
+      let changes = [];
+      if (i === 5) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://vlamo-bookings.example.net" }];
+      if (kind === "changed" && i === 0) changes = [{ field: "phoneNumbers", was: baseline.phoneNumbers, now: { primaryPhone: "+27 82 555 0199" } }];
+      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes });
     }
     log.reverse();
     const runs = log.slice(-8).reverse().map((e, i) => ({
-      created_at: new Date(new Date(e.timestamp) - 50e3).toISOString(),
-      updated_at: e.timestamp, event: i === 3 ? "workflow_dispatch" : "schedule",
-      status: "completed", conclusion: e.status === "changed" ? "failure" : "success", html_url: "#",
+      created_at: new Date(new Date(e.timestamp) - 50e3).toISOString(), updated_at: e.timestamp,
+      event: i === 3 ? "workflow_dispatch" : "schedule", status: "completed",
+      conclusion: e.status === "changed" ? "failure" : "success", html_url: "#",
     }));
-    return {
-      demo: true, repo: DEFAULT_REPO, baseline, log, runs,
+    const d = {
+      demo: true, repo: DEFAULT_REPO, baseline, log, runs, defaultBranch: "main",
       workflow: { name: "GBP Listing Monitor", path: ".github/workflows/monitor.yml", state: "active" },
       strayWorkflowFiles: [], secrets: ["CONFIG_JSON", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN"],
-      defaultBranch: "main",
     };
+    if (kind === "setup") {
+      Object.assign(d, { baseline: null, log: [], secrets: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+        runs: [0, 1].map((i) => ({ created_at: new Date(last - i * 12 * H).toISOString(), updated_at: new Date(last - i * 12 * H + 21e3).toISOString(), event: "schedule", status: "completed", conclusion: "failure", html_url: "#" })) });
+    }
+    return d;
   }
 
   /* ---------- GitHub API ---------- */
@@ -351,21 +424,14 @@ footer { font-size: .8rem; color: var(--muted); }
   async function gh(path, { raw = false, optional = false, method = "GET", body } = {}) {
     const r = await fetch("https://api.github.com" + path, {
       method, body: body && JSON.stringify(body), cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${conn.token}`, "X-GitHub-Api-Version": "2022-11-28",
-        Accept: raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      },
+      headers: { Authorization: `Bearer ${conn.token}`, "X-GitHub-Api-Version": "2022-11-28",
+        Accept: raw ? "application/vnd.github.raw+json" : "application/vnd.github+json", ...(body ? { "Content-Type": "application/json" } : {}) },
     });
     if (optional && (r.status === 404 || r.status === 403)) return null;
-    if (!r.ok) {
-      let m = r.statusText; try { m = (await r.json()).message || m; } catch {}
-      throw new ApiError(r.status, m);
-    }
+    if (!r.ok) { let m = r.statusText; try { m = (await r.json()).message || m; } catch {} throw new ApiError(r.status, m); }
     if (r.status === 204) return null;
     return raw ? r.text() : r.json();
   }
-
   async function loadLive() {
     const R = `/repos/${conn.repo}`;
     const repo = await gh(R);
@@ -379,195 +445,215 @@ footer { font-size: .8rem; color: var(--muted); }
     let baseline = null;
     if (baselineTxt) { try { baseline = JSON.parse(baselineTxt); } catch { baseline = { _invalid: true }; } }
     const log = (logTxt || "").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-    const wfs = wfList?.workflows || [];
-    const workflow = wfs.find((w) => /monitor/i.test(w.name) || /monitor/i.test(w.path)) || null;
-    let runs = [];
-    if (workflow) runs = (await gh(`${R}/actions/workflows/${workflow.id}/runs?per_page=10`, { optional: true }))?.workflow_runs || [];
-    const strayWorkflowFiles = Array.isArray(wfDir)
-      ? wfDir.filter((f) => f.type === "file" && !/\.ya?ml$/i.test(f.name) && !f.name.startsWith(".")).map((f) => f.path) : [];
-    return {
-      demo: false, repo: conn.repo, defaultBranch: repo.default_branch, baseline, log, runs, workflow,
-      strayWorkflowFiles, secrets: secrets ? secrets.secrets.map((s) => s.name) : null,
-    };
+    const workflow = (wfList?.workflows || []).find((w) => /monitor/i.test(w.name) || /monitor/i.test(w.path)) || null;
+    const runs = workflow ? (await gh(`${R}/actions/workflows/${workflow.id}/runs?per_page=10`, { optional: true }))?.workflow_runs || [] : [];
+    const strayWorkflowFiles = Array.isArray(wfDir) ? wfDir.filter((f) => f.type === "file" && !/\.ya?ml$/i.test(f.name) && !f.name.startsWith(".")).map((f) => f.path) : [];
+    return { demo: false, repo: conn.repo, defaultBranch: repo.default_branch, baseline, log, runs, workflow, strayWorkflowFiles, secrets: secrets ? secrets.secrets.map((s) => s.name) : null };
   }
 
   /* ---------- state ---------- */
   function decide(d) {
-    const lastLog = d.log[d.log.length - 1];
-    const lastRun = d.runs[0];
-    if (!d.workflow) {
-      return { s: "bad", title: "Not running",
-        text: d.strayWorkflowFiles.length
-          ? `GitHub hasn’t picked up the monitor workflow. The file ${d.strayWorkflowFiles.join(", ")} needs a .yml extension, for example .github/workflows/monitor.yml. Until it’s renamed, no checks run.`
-          : "No monitor workflow was found in this repo, so no scheduled checks are running." };
+    const lastLog = d.log[d.log.length - 1], lastRun = d.runs[0];
+    if (!d.workflow) return { kind: "off", s: "bad", title: "Monitor isn’t running",
+      text: d.strayWorkflowFiles.length ? `GitHub hasn’t registered the workflow. Rename ${d.strayWorkflowFiles.join(", ")} to end in .yml, for example .github/workflows/monitor.yml, on the default branch.` : "No monitor workflow was found in this repo, so no scheduled checks run." };
+    if (!d.baseline) return { kind: "setup", s: "warn", title: "Save the approved listing",
+      text: "There’s no baseline.json yet, so every run fails. Run python listing_monitor.py --init on your computer, then commit and push baseline.json." };
+    if (lastLog?.status === "changed") { const n = lastLog.changes.length;
+      return { kind: "changed", s: "bad", title: `${n} field${n === 1 ? "" : "s"} changed`,
+        text: "The latest check doesn’t match the approved listing. The restaurant view shows the owner what to fix. If the change was intended, run --init to approve it." }; }
+    if (lastRun && lastRun.status === "completed" && lastRun.conclusion !== "success" && (!lastLog || new Date(lastRun.created_at) > new Date(lastLog.timestamp)))
+      return { kind: "failing", s: "warn", title: "Checks are failing",
+        text: "The latest run stopped before it could compare the listing. Usually the Google refresh token has expired or a secret is missing. Open the run in GitHub for the error." };
+    if (lastRun && lastRun.status !== "completed") return { kind: "running", s: "idle", title: "Checking now", text: "A run is in progress. Refresh in a minute." };
+    if (!lastLog) return { kind: "waiting", s: "idle", title: "Waiting for the first check", text: "Setup is complete. Results appear after the next run." };
+    if ((Date.now() - new Date(lastLog.timestamp)) / 3600e3 > STALE_HOURS) return { kind: "stale", s: "warn", title: "No recent checks",
+      text: `The last check was ${rel(lastLog.timestamp)}. Make sure the workflow is enabled in the Actions tab. GitHub pauses schedules after 60 days without repo activity.` };
+    return { kind: "ok", s: "ok", title: "All clear", text: "The live listing matches the approved one." };
+  }
+  function forRestaurant(st) {
+    switch (st.kind) {
+      case "ok": return { s: "ok", icon: "check", title: "Your listing is safe", text: "Your name, phone, website and address on Google match what you approved." };
+      case "changed": return { s: "bad", icon: "alert", title: "Your Google listing was changed", text: "Details customers see on Google are different from what you approved. If you didn’t make this change, fix it now." };
+      case "running": return { s: "idle", icon: "clock", title: "Checking your listing", text: "This takes about a minute." };
+      case "waiting": return { s: "idle", icon: "clock", title: "Protection starts soon", text: `The first check runs ${nextText(nextRun())}.` };
+      default: return { s: "warn", icon: "pause", title: "Checks are paused", text: "Your listing isn’t being watched right now. Your operator needs to fix this.", operator: true };
     }
-    if (!d.baseline) {
-      return { s: "warn", title: "Setup needed",
-        text: "There’s no trusted copy of the listing yet. Run python listing_monitor.py --init on your computer, then commit and push baseline.json. Every check fails until this file exists." };
-    }
-    if (lastLog?.status === "changed") {
-      const n = lastLog.changes.length;
-      return { s: "bad", title: "Change detected",
-        text: `The latest check found ${n} field${n === 1 ? "" : "s"} that no longer match your trusted listing. If you didn’t make ${n === 1 ? "this change" : "these changes"}, report it in Google Business Profile now. This alert stays until the listing matches again or you save a new baseline.` };
-    }
-    if (lastRun && lastRun.status === "completed" && lastRun.conclusion !== "success" &&
-        (!lastLog || new Date(lastRun.created_at) > new Date(lastLog.timestamp))) {
-      return { s: "warn", title: "Check failing",
-        text: "The most recent run failed before it could compare the listing. This usually means an expired Google refresh token or a missing secret. Open the run in GitHub to see the error." };
-    }
-    if (lastRun && lastRun.status !== "completed") {
-      return { s: "idle", title: "Checking now", text: "A check is running. Refresh in a minute to see the result." };
-    }
-    if (!lastLog) return { s: "idle", title: "Waiting for first check", text: "Everything is in place. The first result will appear after the next scheduled run." };
-    if ((Date.now() - new Date(lastLog.timestamp)) / 3600e3 > STALE_HOURS) {
-      return { s: "warn", title: "No recent checks",
-        text: `The last check was ${rel(lastLog.timestamp)}. Checks should run every 12 hours. Make sure the workflow is enabled under the repo’s Actions tab. GitHub pauses scheduled workflows after 60 days with no repo activity.` };
-    }
-    return { s: "ok", title: "Listing matches",
-      text: "Your business name, phone, website and address are the same as your trusted copy." };
   }
 
   /* ---------- render ---------- */
-  let data = null, showAll = false;
+  let data = null, showAllR = false, showAllO = false;
+  const emptyRow = (ic, v, k) => `<li><span class="ico">${icon(ic)}</span><div><div class="v">${v}</div><div class="k">${k}</div></div><span></span></li>`;
 
-  function render() {
-    const d = data;
-    $("demoChip").hidden = !d.demo;
-    $("runBtn").disabled = d.demo || !d.workflow;
-    $("bizName").textContent = d.baseline?.title || "Listing Watch";
-    $("repoLine").innerHTML = d.demo
-      ? "Showing example data. Connect your repo to see your real listing."
-      : `Monitoring from <a href="https://github.com/${esc(d.repo)}" target="_blank" rel="noopener">${esc(d.repo)}</a>`;
-    $("actionsLink").href = d.demo ? "#" : `https://github.com/${d.repo}/actions`;
+  function renderRestaurant(d, st) {
+    const r = forRestaurant(st);
+    $("rHero").dataset.s = r.s;
+    $("rBadge").innerHTML = icon(r.icon);
+    $("rTitle").textContent = r.title;
+    $("rText").textContent = r.text;
+    $("rActions").innerHTML = r.operator ? `<button type="button" class="btn secondary" data-goto="operator">See what’s wrong</button>` : "";
 
-    const st = decide(d);
-    $("state").dataset.s = st.s;
-    $("stateTitle").textContent = st.title;
-    $("stateText").textContent = st.text;
     const lastLog = d.log[d.log.length - 1];
-    const meta = [];
-    if (lastLog) meta.push(`Last check ${rel(lastLog.timestamp)} · ${fmtDate(lastLog.timestamp)}`);
-    meta.push(`${d.log.length} check${d.log.length === 1 ? "" : "s"} logged`);
-    const changes = d.log.filter((e) => e.status === "changed").length;
-    if (d.log.length) meta.push(`${changes} with changes`);
-    $("stateMeta").innerHTML = meta.map((m) => `<span>${esc(m)}</span>`).join("");
-
-    // trusted listing
-    if (d.baseline && !d.baseline._invalid) {
-      const current = lastLog?.status === "changed" ? Object.fromEntries(lastLog.changes.map((c) => [c.field, c.now])) : {};
-      $("fields").innerHTML = FIELDS.map((f) => {
-        const changedNow = f in current;
-        return `<div><dt class="label">${FIELD_LABELS[f]}</dt><dd>${esc(fmtField(f, d.baseline[f]))}${
-          changedNow ? `<div class="diff"><div class="row"><span class="label">Live listing now shows</span><span class="v now">${esc(fmtField(f, current[f]))}</span></div></div>` : ""
-        }</dd></div>`;
-      }).join("");
-    } else {
-      $("fields").innerHTML = `<div><dd class="muted">${d.baseline?._invalid ? "baseline.json couldn’t be read. It may be malformed." : "No baseline saved yet. Run the monitor with --init to record your correct listing."}</dd></div>`;
+    const nr = nextRun();
+    $("rEta").hidden = !lastLog || !!r.operator;
+    if (lastLog) {
+      $("etaLast").textContent = fmtTime(lastLog.timestamp);
+      $("etaNext").textContent = nextText(nr);
+      const a = new Date(lastLog.timestamp), pct = Math.max(0, Math.min(1, (Date.now() - a) / (nr - a)));
+      $("etaFill").style.width = `${pct * 100}%`; $("etaCar").style.left = `${pct * 100}%`;
+      $("etaNote").textContent = `Last check ${dayLabel(lastLog.timestamp).toLowerCase()}. Next one ${rel(nr)}. Checks run every morning and evening.`;
     }
 
-    // schedule
-    const nr = nextRun();
-    $("nextTime").textContent = tf.format(nr);
-    $("nextRel").textContent = `${rel(nr)} · ${new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" }).format(nr)}`;
-    $("slots").innerHTML = CRON_HOURS_UTC.map((h) => {
-      const sast = String((h + 2) % 24).padStart(2, "0") + ":00";
-      return `<span class="slot">${String(h).padStart(2, "0")}:00 UTC · ${sast} SAST</span>`;
-    }).join("");
+    const changed = st.kind === "changed" ? lastLog.changes : [];
+    $("rChange").hidden = !changed.length;
+    $("rCmp").innerHTML = changed.map((c) => `<div class="f"><div class="lab">${esc(FIELD_LABELS[c.field] || c.field)}</div>
+      <div class="pair"><span>Approved</span><span class="was">${esc(fmtField(c.field, c.was))}</span><span>Now on Google</span><span class="now">${esc(fmtField(c.field, c.now))}</span></div></div>`).join("");
 
-    // strip
-    const recent = d.log.slice(-60);
-    $("strip").innerHTML = recent.map((e) => `<i class="${e.status === "changed" ? "changed" : ""}" title="${esc(fmtDate(e.timestamp))}: ${e.status === "changed" ? "change detected" : "no change"}"></i>`).join("");
-    $("stripAxis").innerHTML = recent.length > 1 ? `<span>${esc(fmtDate(recent[0].timestamp))}</span><span>${esc(fmtDate(recent[recent.length - 1].timestamp))}</span>` : "";
-    $("histCount").textContent = d.log.length ? `Latest ${Math.min(recent.length, d.log.length)} shown in bar` : "";
+    const changedFields = new Set(changed.map((c) => c.field));
+    $("rFields").innerHTML = d.baseline && !d.baseline._invalid ? FIELDS.map((f) => `<li><span class="ico">${icon(FIELD_ICON[f])}</span>
+        <div><div class="k">${FIELD_LABELS[f]}</div><div class="v">${esc(fmtField(f, d.baseline[f]))}</div></div>
+        ${changedFields.has(f) ? '<span class="tag" data-s="bad">Changed</span>' : st.kind === "ok" ? '<span class="tag" data-s="ok">Matches</span>' : "<span></span>"}</li>`).join("")
+      : emptyRow("q", "Not saved yet", "Your operator records your approved details during setup.");
 
-    // log
     const entries = d.log.slice().reverse();
-    const visible = showAll ? entries : entries.slice(0, 8);
-    $("log").innerHTML = visible.length ? visible.map((e) => `
-      <li><time datetime="${esc(e.timestamp)}">${esc(fmtDate(e.timestamp))}</time>
-        <div>${e.status === "changed"
-          ? `<span class="pill bad">${e.changes.length} change${e.changes.length === 1 ? "" : "s"}</span>
-             <div class="diff">${e.changes.map((c) => `<div class="row"><span class="label">${esc(FIELD_LABELS[c.field] || c.field)}</span>
-               <span class="v was">${esc(fmtField(c.field, c.was))}</span><span class="v now">${esc(fmtField(c.field, c.now))}</span></div>`).join("")}</div>`
-          : `<span class="pill ok">No change</span>`}</div></li>`).join("")
-      : `<li><span></span><span class="muted">No checks logged yet. Results appear here after each run.</span></li>`;
-    $("moreBtn").hidden = entries.length <= 8;
-    $("moreBtn").textContent = showAll ? "Show fewer" : `Show all ${entries.length} checks`;
-
-    // runs
-    $("runs").innerHTML = d.runs.length ? d.runs.map((r) => {
-      const res = r.status !== "completed" ? ["idle", "Running"] : r.conclusion === "success" ? ["ok", "Passed"] : ["bad", r.conclusion === "failure" ? "Failed" : (r.conclusion || "Ended")];
-      return `<tr><td><a href="${esc(r.html_url)}" target="_blank" rel="noopener">${esc(fmtDate(r.created_at))}</a></td>
-        <td>${r.event === "schedule" ? "Scheduled" : r.event === "workflow_dispatch" ? "Manual" : esc(r.event)}</td>
-        <td><span class="pill ${res[0]}">${esc(res[1])}</span></td><td class="mono">${r.status === "completed" ? dur(r.created_at, r.updated_at) : "…"}</td></tr>`;
-    }).join("") : `<tr><td colspan="4" class="muted">${d.workflow ? "No runs yet." : "No runs, because GitHub hasn’t registered the workflow."}</td></tr>`;
-    if (d.demo) $("runs").insertAdjacentHTML("beforeend", `<tr><td colspan="4" class="muted" style="white-space:normal">A failed run with a logged change means the monitor did its job: it exits with an error so GitHub also emails you.</td></tr>`);
-
-    // checklist
-    const need = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "CONFIG_JSON"];
-    const missing = d.secrets ? need.filter((n) => !d.secrets.includes(n)) : null;
-    const items = [
-      [d.workflow ? "ok" : "bad", "Workflow registered with GitHub",
-        d.workflow ? `${esc(d.workflow.path)} is ${esc(d.workflow.state || "active")}.`
-          : d.strayWorkflowFiles.length ? `Rename <code>${esc(d.strayWorkflowFiles[0])}</code> to <code>.github/workflows/monitor.yml</code>.` : "Add the monitor workflow under <code>.github/workflows/</code>."],
-      [d.baseline ? "ok" : "bad", "Trusted listing saved",
-        d.baseline ? "<code>baseline.json</code> is in the repo." : "Run <code>python listing_monitor.py --init</code> locally, then commit and push <code>baseline.json</code>."],
-      [missing == null ? "unk" : missing.length ? "bad" : "ok", "Repository secrets set",
-        missing == null ? "Can’t confirm with this token. Add <b>Secrets: read</b> permission to check, or look under Settings → Secrets and variables → Actions."
-          : missing.length ? `Missing: ${missing.map((m) => `<code>${m}</code>`).join(" ")}` : "All four secrets are present."],
-      [d.runs.some((r) => r.conclusion === "success") || d.log.length ? "ok" : "unk", "A check has completed",
-        d.log.length ? `Most recent ${rel(d.log[d.log.length - 1].timestamp)}.` : "Use “Run check now” once the items above are done."],
-    ];
-    $("checklist").innerHTML = items.map(([s, t, p]) => `<li><span class="mark ${s}" aria-label="${s === "ok" ? "done" : s === "bad" ? "needs action" : "unknown"}">${s === "ok" ? "✓" : s === "bad" ? "!" : "?"}</span><div><b>${t}</b><p>${p}</p></div></li>`).join("");
+    const vis = showAllR ? entries : entries.slice(0, 6);
+    let lastDay = "";
+    $("rActivity").innerHTML = vis.length ? vis.map((e) => {
+      const day = dayLabel(e.timestamp), head = day !== lastDay ? `<li class="day">${esc(day)}</li>` : "";
+      lastDay = day;
+      const bad = e.status === "changed";
+      return head + `<li><span class="ico" style="color:var(--${bad ? "bad" : "ok"})">${icon(bad ? "alert" : "check")}</span>
+        <div><div class="v">${bad ? `${esc(e.changes.map((c) => FIELD_LABELS[c.field] || c.field).join(", "))} changed` : "Checked, no changes"}</div><div class="k">${esc(fmtTime(e.timestamp))}</div></div><span></span></li>`;
+    }).join("") : emptyRow("clock", "No checks yet", "Each check will show up here.");
+    $("rMore").hidden = entries.length <= 6;
+    $("rMore").textContent = showAllR ? "Show less" : "See all";
   }
 
-  function toast(msg, kind = "bad") { const t = $("toast"); t.className = `toast ${kind}`; t.textContent = msg; t.hidden = !msg; }
+  function renderOperator(d, st) {
+    $("oStatus").dataset.s = st.s;
+    $("oBadge").innerHTML = icon({ ok: "check", bad: "alert", warn: "alert", idle: "clock" }[st.s]);
+    $("oTitle").textContent = st.title;
+    $("oText").textContent = st.text;
+    const lastLog = d.log[d.log.length - 1];
+    const chips = [
+      lastLog ? `Last check ${rel(lastLog.timestamp)}` : "No checks logged",
+      `Next check ${nextText(nextRun())}`,
+      `${d.log.length} checks · ${d.log.filter((e) => e.status === "changed").length} with changes`,
+    ];
+    $("oChips").innerHTML = chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("");
+    $("runBtn").disabled = d.demo || !d.workflow;
+    $("runBtn").title = d.demo ? "Connect your monitor first" : "";
+    $("actionsLink").href = d.demo ? "#" : `https://github.com/${d.repo}/actions`;
+
+    const need = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "CONFIG_JSON"];
+    const missing = d.secrets ? need.filter((n) => !d.secrets.includes(n)) : null;
+    const steps = [
+      [d.workflow ? "ok" : "bad", "Workflow registered",
+        d.workflow ? `<code>${esc(d.workflow.path)}</code> is ${esc(d.workflow.state || "active")}.` : d.strayWorkflowFiles.length ? `Rename <code>${esc(d.strayWorkflowFiles[0])}</code> to <code>.github/workflows/monitor.yml</code>.` : "Add the workflow under <code>.github/workflows/</code>."],
+      [missing == null ? "unk" : missing.length ? "bad" : "ok", "Secrets added",
+        missing == null ? "Can’t confirm with this token. Add <b>Secrets: read</b>, or check Settings → Secrets and variables → Actions." : missing.length ? `Missing ${missing.map((m) => `<code>${m}</code>`).join(" ")}` : "All four are set."],
+      [d.baseline ? "ok" : "bad", "Approved listing saved",
+        d.baseline ? "<code>baseline.json</code> is in the repo." : "Run <code>python listing_monitor.py --init</code>, then commit and push <code>baseline.json</code>."],
+      [d.log.length ? "ok" : "unk", "First check done", d.log.length ? `Latest ${rel(lastLog.timestamp)}.` : "Use Run check now once the steps above are done."],
+    ];
+    const done = steps.filter((s) => s[0] === "ok").length;
+    $("setupBar").innerHTML = steps.map((s) => `<i class="${s[0] === "ok" ? "on" : ""}"></i>`).join("");
+    $("setupCount").textContent = `${done} of ${steps.length} done`;
+    $("setup").innerHTML = steps.map(([s, t, p]) => `<li><span class="ico" style="color:var(--${s === "ok" ? "ok" : s === "bad" ? "bad" : "muted"})">${icon(s === "ok" ? "check" : s === "bad" ? "x" : "q")}</span>
+      <div><div class="v">${t}</div><div class="sub">${p}</div></div></li>`).join("");
+
+    $("runs").innerHTML = d.runs.length ? d.runs.slice(0, 6).map((r) => {
+      const [s, label] = r.status !== "completed" ? ["idle", "Running"] : r.conclusion === "success" ? ["ok", "Passed"] : ["bad", r.conclusion === "failure" ? "Failed" : (r.conclusion || "Ended")];
+      return `<li><span class="ico">${icon(r.event === "workflow_dispatch" ? "play" : "clock")}</span>
+        <div><div class="v"><a href="${esc(r.html_url)}" target="_blank" rel="noopener">${esc(fmtDT(r.created_at))}</a></div>
+        <div class="k">${r.event === "schedule" ? "Scheduled" : r.event === "workflow_dispatch" ? "Manual" : esc(r.event)} · ${r.status === "completed" ? dur(r.created_at, r.updated_at) : "in progress"}</div></div>
+        <span class="tag" data-s="${s}">${esc(label)}</span></li>`;
+    }).join("") : emptyRow("q", "No runs yet", d.workflow ? "The first scheduled run will appear here." : "GitHub hasn’t registered the workflow.");
+
+    const entries = d.log.slice().reverse();
+    const vis = showAllO ? entries : entries.slice(0, 8);
+    $("logCount").textContent = entries.length ? `${entries.length} entries` : "";
+    $("log").innerHTML = vis.length ? vis.map((e) => { const bad = e.status === "changed";
+      return `<li><span class="ico" style="color:var(--${bad ? "bad" : "ok"})">${icon(bad ? "alert" : "check")}</span>
+        <div><div class="v">${esc(fmtDT(e.timestamp))}</div>${bad ? `<div class="log-diff">${e.changes.map((c) => `<div><b>${esc(FIELD_LABELS[c.field] || c.field)}:</b> <s>${esc(fmtField(c.field, c.was))}</s> → ${esc(fmtField(c.field, c.now))}</div>`).join("")}</div>` : '<div class="k">No changes</div>'}</div>
+        <span class="tag" data-s="${bad ? "bad" : "ok"}">${bad ? "Changed" : "OK"}</span></li>`; }).join("")
+      : emptyRow("clock", "Nothing logged yet", "Each run adds a line to change_log.jsonl.");
+    $("logMore").hidden = entries.length <= 8;
+    $("logMore").textContent = showAllO ? "Show fewer" : `Show all ${entries.length}`;
+
+    $("conn").innerHTML = emptyRow("repo", d.demo ? "Not connected" : `<a href="https://github.com/${esc(d.repo)}" target="_blank" rel="noopener">${esc(d.repo)}</a>`, "Monitor repo")
+      + emptyRow("key", conn.token ? (remembered() ? "Saved on this device" : "Saved until you close this tab") : "None. Showing example data.", "GitHub token");
+    $("connectBtn").textContent = conn.token ? "Change" : "Connect";
+  }
+
+  function render() {
+    const d = data, st = decide(d);
+    $("exampleBar").hidden = !d.demo;
+    $("segRestaurant").setAttribute("aria-pressed", String(view === "restaurant"));
+    $("segOperator").setAttribute("aria-pressed", String(view === "operator"));
+    $("restaurantView").hidden = view !== "restaurant";
+    $("operatorView").hidden = view !== "operator";
+    renderRestaurant(d, st);
+    renderOperator(d, st);
+  }
+
+  function toast(msg, kind = "bad") { for (const id of ["toastR", "toastO"]) { const t = $(id); t.className = `toast ${kind}`; t.textContent = msg; t.hidden = !msg; } }
 
   async function load() {
     toast("");
-    if (!conn.token) { data = demoData(); render(); return; }
+    if (!conn.token) { data = demoData(scenario); render(); return; }
     $("refreshBtn").disabled = true;
-    try {
-      data = await loadLive(); render();
-    } catch (e) {
-      const hint = e.status === 401 ? "The token was rejected. It may have expired; create a new one and connect again."
-        : e.status === 404 ? `Couldn’t find ${conn.repo}. Check the name, and that the token has access to this repo.`
-        : e.status === 403 ? "GitHub refused the request. The token may be missing a permission, or you hit the API rate limit."
-        : `Couldn’t reach GitHub (${e.message}).`;
-      toast(hint);
-      if (!data) { data = demoData(); render(); }
+    try { data = await loadLive(); render(); }
+    catch (e) {
+      toast(e.status === 401 ? "GitHub rejected the token. It may have expired. Create a new one and connect again."
+        : e.status === 404 ? `Couldn’t find ${conn.repo}. Check the name and that the token can access it.`
+        : e.status === 403 ? "GitHub refused the request. The token may be missing a permission, or the hourly limit was reached."
+        : `Couldn’t reach GitHub (${e.message}).`);
+      if (!data) { data = demoData(scenario); render(); }
     } finally { $("refreshBtn").disabled = false; }
   }
 
   /* ---------- events ---------- */
+  function setView(v) { view = v; store.set("lw.view", v, true); try { history.replaceState(null, "", "#" + v); } catch {} render(); window.scrollTo(0, 0); }
+  $("segRestaurant").onclick = () => setView("restaurant");
+  $("segOperator").onclick = () => setView("operator");
+  document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) setView(g.dataset.goto); });
+  $("scenario").onchange = (e) => { scenario = e.target.value; data = demoData(scenario); render(); };
   $("refreshBtn").onclick = load;
-  $("moreBtn").onclick = () => { showAll = !showAll; render(); };
-  $("connectBtn").onclick = () => {
-    $("repoInput").value = conn.repo; $("tokenInput").value = conn.token;
-    $("rememberInput").checked = (() => { try { return !!localStorage.getItem("lw.token"); } catch { return false; } })();
-    $("connectPanel").hidden = false; $("repoInput").focus();
-  };
-  $("cancelConnect").onclick = () => { $("connectPanel").hidden = true; };
-  $("forgetConnect").onclick = () => { store.del("lw.token"); store.del("lw.repo"); conn = { repo: DEFAULT_REPO, token: "" }; $("connectPanel").hidden = true; load(); };
+  $("rMore").onclick = () => { showAllR = !showAllR; render(); };
+  $("logMore").onclick = () => { showAllO = !showAllO; render(); };
+
+  const sheet = $("sheet");
+  function openSheet() {
+    $("repoInput").value = conn.repo; $("tokenInput").value = conn.token; $("sheetErr").hidden = true;
+    $("rememberInput").checked = remembered();
+    sheet.hidden = false; $("repoInput").focus();
+  }
+  const closeSheet = () => { sheet.hidden = true; };
+  $("connectBtn").onclick = openSheet;
+  $("exampleConnect").onclick = openSheet;
+  $("cancelConnect").onclick = closeSheet;
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden) closeSheet(); });
+  $("forgetConnect").onclick = () => { store.del("lw.token"); store.del("lw.repo"); conn = { repo: DEFAULT_REPO, token: "" }; data = null; closeSheet(); load(); };
   $("saveConnect").onclick = () => {
     const repo = $("repoInput").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "");
     const token = $("tokenInput").value.trim();
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { toast("Enter the repo as owner/name, for example mavusosesikho40-eng/gbp-monitor."); return; }
-    if (!token) { toast("Paste a GitHub token to connect."); return; }
+    const err = (m) => { $("sheetErr").textContent = m; $("sheetErr").hidden = false; };
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return err("Enter the repo as owner/name, for example mavusosesikho40-eng/gbp-monitor.");
+    if (!token) return err("Paste a GitHub token to connect.");
     const remember = $("rememberInput").checked;
     store.set("lw.repo", repo, remember); store.set("lw.token", token, remember);
-    conn = { repo, token }; data = null; $("connectPanel").hidden = true; load();
+    conn = { repo, token }; data = null; closeSheet(); load();
   };
   $("runBtn").onclick = async () => {
     if (!data || data.demo || !data.workflow) return;
     $("runBtn").disabled = true;
     try {
       await gh(`/repos/${conn.repo}/actions/workflows/${data.workflow.id}/dispatches`, { method: "POST", body: { ref: data.defaultBranch } });
-      toast("Check started. Results usually appear within a minute; press Refresh.", "ok");
+      toast("Check started. Results usually appear within a minute.", "ok");
       setTimeout(load, 20000);
-    } catch (e) {
-      toast(e.status === 403 ? "This token can’t start runs. Give it Actions: write permission." : `Couldn’t start the check (${e.message}).`);
-    } finally { $("runBtn").disabled = false; }
+    } catch (e) { toast(e.status === 403 ? "This token can’t start runs. Give it Actions: write permission." : `Couldn’t start the check (${e.message}).`); }
+    finally { $("runBtn").disabled = false; }
   };
 
   load();
