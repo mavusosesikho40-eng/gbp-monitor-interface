@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Listing Watch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column of state → trusted listing + schedule side by side → check history → monitor runs → setup checklist */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #17211f;
+  --muted: #5d6b67;
+  --line: #d9e0dd;
+  --accent: #0d6b5e;
+  --accent-ink: #ffffff;
+  --ok: #1d7a46;      --ok-bg: #e3f3e9;
+  --warn: #9a5b00;    --warn-bg: #fbf0dc;
+  --bad: #b3261e;     --bad-bg: #fbe5e2;
+  --idle: #4f5d75;    --idle-bg: #e7ebf2;
+  --was: #fbe5e2;     --now: #e3f3e9;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1514; --surface: #172020; --ink: #e6eeeb; --muted: #9aaaa5; --line: #2a3634;
+    --accent: #3fb8a3; --accent-ink: #06231e;
+    --ok: #6fd39a; --ok-bg: #143323; --warn: #f0b75c; --warn-bg: #3a2a10;
+    --bad: #ff8a80; --bad-bg: #3d1915; --idle: #a9b6cf; --idle-bg: #232b3a;
+    --was: #3d1915; --now: #143323;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1514; --surface: #172020; --ink: #e6eeeb; --muted: #9aaaa5; --line: #2a3634;
+  --accent: #3fb8a3; --accent-ink: #06231e;
+  --ok: #6fd39a; --ok-bg: #143323; --warn: #f0b75c; --warn-bg: #3a2a10;
+  --bad: #ff8a80; --bad-bg: #3d1915; --idle: #a9b6cf; --idle-bg: #232b3a;
+  --was: #3d1915; --now: #143323;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 1.35rem; font-weight: 700; }
+h2 { font-size: 1.05rem; font-weight: 700; }
+.label { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.mono { font-family: var(--font-mono); font-size: .85em; }
+.muted { color: var(--muted); }
+a { color: var(--accent); }
+button, .btn {
+  font: 600 .88rem var(--font-body); border-radius: 8px; padding: 8px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:disabled { opacity: .55; cursor: default; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* top bar */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.pin { width: 30px; height: 30px; flex: none; }
+.top .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.demo-chip { font: 600 .72rem var(--font-body); letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 99px; background: var(--idle-bg); color: var(--idle); }
+
+/* state banner */
+.state { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
+  padding: 20px 22px; border-radius: var(--radius); background: var(--s-bg); color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--s-fg) 30%, transparent); }
+.state[data-s="ok"]   { --s-fg: var(--ok);   --s-bg: var(--ok-bg); }
+.state[data-s="warn"] { --s-fg: var(--warn); --s-bg: var(--warn-bg); }
+.state[data-s="bad"]  { --s-fg: var(--bad);  --s-bg: var(--bad-bg); }
+.state[data-s="idle"] { --s-fg: var(--idle); --s-bg: var(--idle-bg); }
+.state .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--s-fg); margin-top: 8px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--s-fg) 22%, transparent); }
+.state h2 { font-size: 1.6rem; color: var(--s-fg); }
+.state p { margin: 6px 0 0; max-width: 68ch; }
+.state .meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .85rem; color: var(--muted); }
+
+/* panels */
+.grid2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; min-width: 0; }
+.panel > header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+
+.fields { display: grid; gap: 0; margin: 0; }
+.fields > div { display: grid; grid-template-columns: 9rem 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.fields > div:first-child { border-top: 0; }
+.fields dt { margin: 0; }
+.fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .fields > div { grid-template-columns: 1fr; gap: 2px; } }
+
+.sched { display: grid; gap: 14px; }
+.big-time { font: 700 1.9rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.slot { font: 500 .8rem var(--font-mono); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
+
+/* history strip */
+.strip { display: flex; gap: 3px; align-items: flex-end; height: 34px; margin: 4px 0 14px; overflow: hidden; }
+.strip i { flex: 1 1 0; min-width: 2px; height: 100%; border-radius: 2px; background: var(--ok); opacity: .75; }
+.strip i.changed { background: var(--bad); opacity: 1; }
+.strip-axis { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-top: -10px; margin-bottom: 10px; }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; }
+.log li { display: grid; grid-template-columns: 10rem 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.log li:first-child { border-top: 0; }
+.log time { white-space: nowrap; font: 500 .8rem/1.6 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 600 .74rem var(--font-body); padding: 2px 8px; border-radius: 99px; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.idle { background: var(--idle-bg); color: var(--idle); }
+.diff { margin-top: 8px; display: grid; gap: 8px; }
+.diff .row { display: grid; gap: 4px; }
+.diff .v { font: .85rem var(--font-mono); padding: 4px 8px; border-radius: 6px; overflow-wrap: anywhere; }
+.diff .was { background: var(--was); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--bad) 60%, transparent); }
+.diff .now { background: var(--now); }
+@media (max-width: 480px) { .log li { grid-template-columns: 1fr; gap: 4px; } }
+.more { margin-top: 10px; }
+
+.runs { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.runs th { text-align: left; font-weight: 600; color: var(--muted); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.runs td { padding: 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.checklist li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
+.mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 700 .75rem var(--font-body); }
+.mark.ok { background: var(--ok-bg); color: var(--ok); }
+.mark.bad { background: var(--bad-bg); color: var(--bad); }
+.mark.unk { background: var(--idle-bg); color: var(--idle); }
+.checklist p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+code { font-family: var(--font-mono); font-size: .85em; background: color-mix(in srgb, var(--line) 55%, transparent); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+/* connect dialog */
+.connect { display: grid; gap: 12px; }
+.connect label { display: grid; gap: 4px; font-weight: 600; font-size: .88rem; }
+.connect input[type=text], .connect input[type=password] {
+  font: .9rem var(--font-mono); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--ink); width: 100%;
+}
+.connect .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.connect .check { display: flex; gap: 8px; align-items: center; font-weight: 500; }
+.note { font-size: .85rem; color: var(--muted); margin: 0; max-width: 70ch; }
+.toast { padding: 10px 14px; border-radius: 8px; font-size: .9rem; }
+.toast.bad { background: var(--bad-bg); color: var(--bad); }
+.toast.ok { background: var(--ok-bg); color: var(--ok); }
+footer { font-size: .8rem; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .state .dot { transition: background .3s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Z"/><path fill="var(--surface)" d="m10.6 12.6-2-2-1.2 1.2 3.2 3.2 5.8-5.8-1.2-1.2z"/></svg>
+      <div>
+        <h1 id="bizName">Listing Watch</h1>
+        <div class="muted" style="font-size:.85rem" id="repoLine">Google Business Profile monitor</div>
+      </div>
+    </div>
+    <div class="actions">
+      <span class="demo-chip" id="demoChip" hidden>Example data</span>
+      <button id="refreshBtn" type="button">Refresh</button>
+      <button id="runBtn" type="button" class="primary">Run check now</button>
+      <button id="connectBtn" type="button">Connect</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <section class="panel connect" id="connectPanel" hidden aria-label="Connect to GitHub">
+    <h2>Connect to your monitor repo</h2>
+    <p class="note">The monitor stores its baseline and check log in a private GitHub repo, so this page needs a GitHub token to read it. Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a> for that one repo with <b>Contents: read</b> and <b>Actions: read</b>. Add <b>Actions: write</b> if you want the “Run check now” button, and <b>Secrets: read</b> to let the checklist confirm your secrets are set. The token is only sent to api.github.com.</p>
+    <label for="repoInput">Monitor repo
+      <input type="text" id="repoInput" autocomplete="off" spellcheck="false" placeholder="owner/repo">
+    </label>
+    <label for="tokenInput">GitHub token
+      <input type="password" id="tokenInput" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+    </label>
+    <div class="row">
+      <label class="check" for="rememberInput"><input type="checkbox" id="rememberInput"> Remember on this device</label>
+    </div>
+    <div class="row">
+      <button type="button" class="primary" id="saveConnect">Connect</button>
+      <button type="button" id="cancelConnect">Cancel</button>
+      <button type="button" id="forgetConnect">Disconnect and use example data</button>
+    </div>
+  </section>
+
+  <section class="state" id="state" data-s="idle" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <div>
+      <h2 id="stateTitle">Loading…</h2>
+      <p id="stateText"></p>
+      <div class="meta" id="stateMeta"></div>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <header><h2>Trusted listing</h2><span class="label" id="baselineSrc">baseline.json</span></header>
+      <dl class="fields" id="fields"></dl>
+    </section>
+    <section class="panel sched">
+      <header style="margin:0"><h2>Schedule</h2><span class="label">Twice daily</span></header>
+      <div>
+        <div class="label">Next scheduled check</div>
+        <div class="big-time" id="nextTime">—</div>
+        <div class="muted" id="nextRel"></div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px">Check times</div>
+        <div class="slots" id="slots"></div>
+      </div>
+      <p class="note">GitHub can start scheduled runs up to about 30 minutes late when it is busy.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <header><h2>Check history</h2><span class="label" id="histCount"></span></header>
+    <div class="strip" id="strip" aria-hidden="true"></div>
+    <div class="strip-axis" id="stripAxis"></div>
+    <ul class="log" id="log"></ul>
+    <button type="button" class="more" id="moreBtn" hidden>Show older checks</button>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <header><h2>Monitor runs</h2><a id="actionsLink" class="label" href="#" target="_blank" rel="noopener">Open in GitHub</a></header>
+      <div class="table-wrap"><table class="runs"><thead><tr><th>Started</th><th>Trigger</th><th>Result</th><th>Took</th></tr></thead><tbody id="runs"></tbody></table></div>
+    </section>
+    <section class="panel">
+      <header><h2>Setup checklist</h2></header>
+      <ul class="checklist" id="checklist"></ul>
+    </section>
+  </div>
+
+  <footer>Watches the business name, phone numbers, website and address. If something changes that you didn’t change, report it in Google Business Profile straight away, then run <code>python listing_monitor.py --init</code> once the listing is correct again.</footer>
+</div>
+
+<script>
+(() => {
+  const DEFAULT_REPO = "mavusosesikho40-eng/gbp-monitor";
+  const CRON_HOURS_UTC = [6, 18];
+  const STALE_HOURS = 13;
+  const FIELD_LABELS = { title: "Business name", phoneNumbers: "Phone", websiteUri: "Website", storefrontAddress: "Address" };
+  const FIELDS = Object.keys(FIELD_LABELS);
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /* ---------- storage (best effort) ---------- */
+  const store = {
+    get(k) { try { return localStorage.getItem(k) ?? sessionStorage.getItem(k); } catch { return null; } },
+    set(k, v, remember) {
+      try { (remember ? localStorage : sessionStorage).setItem(k, v); (remember ? sessionStorage : localStorage).removeItem(k); } catch {}
+    },
+    del(k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch {} },
+  };
+  let conn = { repo: store.get("lw.repo") || DEFAULT_REPO, token: store.get("lw.token") || "" };
+
+  /* ---------- formatting ---------- */
+  function fmtField(field, v) {
+    if (v == null || v === "") return "(not set)";
+    if (field === "phoneNumbers") {
+      return [v.primaryPhone, ...(v.additionalPhones || [])].filter(Boolean).join(", ") || "(not set)";
+    }
+    if (field === "storefrontAddress") {
+      return [...(v.addressLines || []), v.sublocality, v.locality, v.administrativeArea, v.postalCode, v.regionCode]
+        .filter(Boolean).join(", ") || "(not set)";
+    }
+    return typeof v === "string" ? v : JSON.stringify(v);
+  }
+  const dtf = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const tf = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+  const fmtDate = (d) => dtf.format(new Date(d));
+  function rel(d) {
+    const s = (new Date(d) - Date.now()) / 1000, a = Math.abs(s);
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+    if (a < 3600) return rtf.format(Math.round(s / 60), "minute");
+    if (a < 86400 * 2) return rtf.format(Math.round(s / 3600), "hour");
+    return rtf.format(Math.round(s / 86400), "day");
+  }
+  function dur(a, b) {
+    const s = Math.max(0, Math.round((new Date(b) - new Date(a)) / 1000));
+    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+  }
+  function nextRun(now = new Date()) {
+    const c = [];
+    for (let d = 0; d < 2; d++) for (const h of CRON_HOURS_UTC) {
+      const t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d, h));
+      if (t > now) c.push(t);
+    }
+    return c.sort((a, b) => a - b)[0];
+  }
+
+  /* ---------- example data ---------- */
+  function demoData() {
+    const now = Date.now(), H = 3600e3;
+    const baseline = {
+      title: "VLAMO Restaurant",
+      phoneNumbers: { primaryPhone: "+27 11 555 0142" },
+      websiteUri: "https://vlamo.example",
+      storefrontAddress: { addressLines: ["12 Example Street"], locality: "Johannesburg", administrativeArea: "Gauteng", postalCode: "2001", regionCode: "ZA" },
+    };
+    const last = nextRun(new Date(now - 12 * H));
+    const log = [];
+    for (let i = 0; i < 28; i++) {
+      const t = new Date(last.getTime() - i * 12 * H + (4 + (i * 7) % 11) * 60e3);
+      const changed = i === 5;
+      log.push({
+        timestamp: t.toISOString(), status: changed ? "changed" : "ok",
+        changes: changed ? [{ field: "websiteUri", was: baseline.websiteUri, now: "https://vlamo-bookings.example.net" }] : [],
+      });
+    }
+    log.reverse();
+    const runs = log.slice(-8).reverse().map((e, i) => ({
+      created_at: new Date(new Date(e.timestamp) - 50e3).toISOString(),
+      updated_at: e.timestamp, event: i === 3 ? "workflow_dispatch" : "schedule",
+      status: "completed", conclusion: e.status === "changed" ? "failure" : "success", html_url: "#",
+    }));
+    return {
+      demo: true, repo: DEFAULT_REPO, baseline, log, runs,
+      workflow: { name: "GBP Listing Monitor", path: ".github/workflows/monitor.yml", state: "active" },
+      strayWorkflowFiles: [], secrets: ["CONFIG_JSON", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN"],
+      defaultBranch: "main",
+    };
+  }
+
+  /* ---------- GitHub API ---------- */
+  class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+  async function gh(path, { raw = false, optional = false, method = "GET", body } = {}) {
+    const r = await fetch("https://api.github.com" + path, {
+      method, body: body && JSON.stringify(body), cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${conn.token}`, "X-GitHub-Api-Version": "2022-11-28",
+        Accept: raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+    });
+    if (optional && (r.status === 404 || r.status === 403)) return null;
+    if (!r.ok) {
+      let m = r.statusText; try { m = (await r.json()).message || m; } catch {}
+      throw new ApiError(r.status, m);
+    }
+    if (r.status === 204) return null;
+    return raw ? r.text() : r.json();
+  }
+
+  async function loadLive() {
+    const R = `/repos/${conn.repo}`;
+    const repo = await gh(R);
+    const [baselineTxt, logTxt, wfList, wfDir, secrets] = await Promise.all([
+      gh(`${R}/contents/baseline.json`, { raw: true, optional: true }),
+      gh(`${R}/contents/change_log.jsonl`, { raw: true, optional: true }),
+      gh(`${R}/actions/workflows?per_page=100`, { optional: true }),
+      gh(`${R}/contents/.github/workflows`, { optional: true }),
+      gh(`${R}/actions/secrets?per_page=100`, { optional: true }),
+    ]);
+    let baseline = null;
+    if (baselineTxt) { try { baseline = JSON.parse(baselineTxt); } catch { baseline = { _invalid: true }; } }
+    const log = (logTxt || "").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    const wfs = wfList?.workflows || [];
+    const workflow = wfs.find((w) => /monitor/i.test(w.name) || /monitor/i.test(w.path)) || null;
+    let runs = [];
+    if (workflow) runs = (await gh(`${R}/actions/workflows/${workflow.id}/runs?per_page=10`, { optional: true }))?.workflow_runs || [];
+    const strayWorkflowFiles = Array.isArray(wfDir)
+      ? wfDir.filter((f) => f.type === "file" && !/\.ya?ml$/i.test(f.name) && !f.name.startsWith(".")).map((f) => f.path) : [];
+    return {
+      demo: false, repo: conn.repo, defaultBranch: repo.default_branch, baseline, log, runs, workflow,
+      strayWorkflowFiles, secrets: secrets ? secrets.secrets.map((s) => s.name) : null,
+    };
+  }
+
+  /* ---------- state ---------- */
+  function decide(d) {
+    const lastLog = d.log[d.log.length - 1];
+    const lastRun = d.runs[0];
+    if (!d.workflow) {
+      return { s: "bad", title: "Not running",
+        text: d.strayWorkflowFiles.length
+          ? `GitHub hasn’t picked up the monitor workflow. The file ${d.strayWorkflowFiles.join(", ")} needs a .yml extension, for example .github/workflows/monitor.yml. Until it’s renamed, no checks run.`
+          : "No monitor workflow was found in this repo, so no scheduled checks are running." };
+    }
+    if (!d.baseline) {
+      return { s: "warn", title: "Setup needed",
+        text: "There’s no trusted copy of the listing yet. Run python listing_monitor.py --init on your computer, then commit and push baseline.json. Every check fails until this file exists." };
+    }
+    if (lastLog?.status === "changed") {
+      const n = lastLog.changes.length;
+      return { s: "bad", title: "Change detected",
+        text: `The latest check found ${n} field${n === 1 ? "" : "s"} that no longer match your trusted listing. If you didn’t make ${n === 1 ? "this change" : "these changes"}, report it in Google Business Profile now. This alert stays until the listing matches again or you save a new baseline.` };
+    }
+    if (lastRun && lastRun.status === "completed" && lastRun.conclusion !== "success" &&
+        (!lastLog || new Date(lastRun.created_at) > new Date(lastLog.timestamp))) {
+      return { s: "warn", title: "Check failing",
+        text: "The most recent run failed before it could compare the listing. This usually means an expired Google refresh token or a missing secret. Open the run in GitHub to see the error." };
+    }
+    if (lastRun && lastRun.status !== "completed") {
+      return { s: "idle", title: "Checking now", text: "A check is running. Refresh in a minute to see the result." };
+    }
+    if (!lastLog) return { s: "idle", title: "Waiting for first check", text: "Everything is in place. The first result will appear after the next scheduled run." };
+    if ((Date.now() - new Date(lastLog.timestamp)) / 3600e3 > STALE_HOURS) {
+      return { s: "warn", title: "No recent checks",
+        text: `The last check was ${rel(lastLog.timestamp)}. Checks should run every 12 hours. Make sure the workflow is enabled under the repo’s Actions tab. GitHub pauses scheduled workflows after 60 days with no repo activity.` };
+    }
+    return { s: "ok", title: "Listing matches",
+      text: "Your business name, phone, website and address are the same as your trusted copy." };
+  }
+
+  /* ---------- render ---------- */
+  let data = null, showAll = false;
+
+  function render() {
+    const d = data;
+    $("demoChip").hidden = !d.demo;
+    $("runBtn").disabled = d.demo || !d.workflow;
+    $("bizName").textContent = d.baseline?.title || "Listing Watch";
+    $("repoLine").innerHTML = d.demo
+      ? "Showing example data. Connect your repo to see your real listing."
+      : `Monitoring from <a href="https://github.com/${esc(d.repo)}" target="_blank" rel="noopener">${esc(d.repo)}</a>`;
+    $("actionsLink").href = d.demo ? "#" : `https://github.com/${d.repo}/actions`;
+
+    const st = decide(d);
+    $("state").dataset.s = st.s;
+    $("stateTitle").textContent = st.title;
+    $("stateText").textContent = st.text;
+    const lastLog = d.log[d.log.length - 1];
+    const meta = [];
+    if (lastLog) meta.push(`Last check ${rel(lastLog.timestamp)} · ${fmtDate(lastLog.timestamp)}`);
+    meta.push(`${d.log.length} check${d.log.length === 1 ? "" : "s"} logged`);
+    const changes = d.log.filter((e) => e.status === "changed").length;
+    if (d.log.length) meta.push(`${changes} with changes`);
+    $("stateMeta").innerHTML = meta.map((m) => `<span>${esc(m)}</span>`).join("");
+
+    // trusted listing
+    if (d.baseline && !d.baseline._invalid) {
+      const current = lastLog?.status === "changed" ? Object.fromEntries(lastLog.changes.map((c) => [c.field, c.now])) : {};
+      $("fields").innerHTML = FIELDS.map((f) => {
+        const changedNow = f in current;
+        return `<div><dt class="label">${FIELD_LABELS[f]}</dt><dd>${esc(fmtField(f, d.baseline[f]))}${
+          changedNow ? `<div class="diff"><div class="row"><span class="label">Live listing now shows</span><span class="v now">${esc(fmtField(f, current[f]))}</span></div></div>` : ""
+        }</dd></div>`;
+      }).join("");
+    } else {
+      $("fields").innerHTML = `<div><dd class="muted">${d.baseline?._invalid ? "baseline.json couldn’t be read. It may be malformed." : "No baseline saved yet. Run the monitor with --init to record your correct listing."}</dd></div>`;
+    }
+
+    // schedule
+    const nr = nextRun();
+    $("nextTime").textContent = tf.format(nr);
+    $("nextRel").textContent = `${rel(nr)} · ${new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" }).format(nr)}`;
+    $("slots").innerHTML = CRON_HOURS_UTC.map((h) => {
+      const sast = String((h + 2) % 24).padStart(2, "0") + ":00";
+      return `<span class="slot">${String(h).padStart(2, "0")}:00 UTC · ${sast} SAST</span>`;
+    }).join("");
+
+    // strip
+    const recent = d.log.slice(-60);
+    $("strip").innerHTML = recent.map((e) => `<i class="${e.status === "changed" ? "changed" : ""}" title="${esc(fmtDate(e.timestamp))}: ${e.status === "changed" ? "change detected" : "no change"}"></i>`).join("");
+    $("stripAxis").innerHTML = recent.length > 1 ? `<span>${esc(fmtDate(recent[0].timestamp))}</span><span>${esc(fmtDate(recent[recent.length - 1].timestamp))}</span>` : "";
+    $("histCount").textContent = d.log.length ? `Latest ${Math.min(recent.length, d.log.length)} shown in bar` : "";
+
+    // log
+    const entries = d.log.slice().reverse();
+    const visible = showAll ? entries : entries.slice(0, 8);
+    $("log").innerHTML = visible.length ? visible.map((e) => `
+      <li><time datetime="${esc(e.timestamp)}">${esc(fmtDate(e.timestamp))}</time>
+        <div>${e.status === "changed"
+          ? `<span class="pill bad">${e.changes.length} change${e.changes.length === 1 ? "" : "s"}</span>
+             <div class="diff">${e.changes.map((c) => `<div class="row"><span class="label">${esc(FIELD_LABELS[c.field] || c.field)}</span>
+               <span class="v was">${esc(fmtField(c.field, c.was))}</span><span class="v now">${esc(fmtField(c.field, c.now))}</span></div>`).join("")}</div>`
+          : `<span class="pill ok">No change</span>`}</div></li>`).join("")
+      : `<li><span></span><span class="muted">No checks logged yet. Results appear here after each run.</span></li>`;
+    $("moreBtn").hidden = entries.length <= 8;
+    $("moreBtn").textContent = showAll ? "Show fewer" : `Show all ${entries.length} checks`;
+
+    // runs
+    $("runs").innerHTML = d.runs.length ? d.runs.map((r) => {
+      const res = r.status !== "completed" ? ["idle", "Running"] : r.conclusion === "success" ? ["ok", "Passed"] : ["bad", r.conclusion === "failure" ? "Failed" : (r.conclusion || "Ended")];
+      return `<tr><td><a href="${esc(r.html_url)}" target="_blank" rel="noopener">${esc(fmtDate(r.created_at))}</a></td>
+        <td>${r.event === "schedule" ? "Scheduled" : r.event === "workflow_dispatch" ? "Manual" : esc(r.event)}</td>
+        <td><span class="pill ${res[0]}">${esc(res[1])}</span></td><td class="mono">${r.status === "completed" ? dur(r.created_at, r.updated_at) : "…"}</td></tr>`;
+    }).join("") : `<tr><td colspan="4" class="muted">${d.workflow ? "No runs yet." : "No runs, because GitHub hasn’t registered the workflow."}</td></tr>`;
+    if (d.demo) $("runs").insertAdjacentHTML("beforeend", `<tr><td colspan="4" class="muted" style="white-space:normal">A failed run with a logged change means the monitor did its job: it exits with an error so GitHub also emails you.</td></tr>`);
+
+    // checklist
+    const need = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "CONFIG_JSON"];
+    const missing = d.secrets ? need.filter((n) => !d.secrets.includes(n)) : null;
+    const items = [
+      [d.workflow ? "ok" : "bad", "Workflow registered with GitHub",
+        d.workflow ? `${esc(d.workflow.path)} is ${esc(d.workflow.state || "active")}.`
+          : d.strayWorkflowFiles.length ? `Rename <code>${esc(d.strayWorkflowFiles[0])}</code> to <code>.github/workflows/monitor.yml</code>.` : "Add the monitor workflow under <code>.github/workflows/</code>."],
+      [d.baseline ? "ok" : "bad", "Trusted listing saved",
+        d.baseline ? "<code>baseline.json</code> is in the repo." : "Run <code>python listing_monitor.py --init</code> locally, then commit and push <code>baseline.json</code>."],
+      [missing == null ? "unk" : missing.length ? "bad" : "ok", "Repository secrets set",
+        missing == null ? "Can’t confirm with this token. Add <b>Secrets: read</b> permission to check, or look under Settings → Secrets and variables → Actions."
+          : missing.length ? `Missing: ${missing.map((m) => `<code>${m}</code>`).join(" ")}` : "All four secrets are present."],
+      [d.runs.some((r) => r.conclusion === "success") || d.log.length ? "ok" : "unk", "A check has completed",
+        d.log.length ? `Most recent ${rel(d.log[d.log.length - 1].timestamp)}.` : "Use “Run check now” once the items above are done."],
+    ];
+    $("checklist").innerHTML = items.map(([s, t, p]) => `<li><span class="mark ${s}" aria-label="${s === "ok" ? "done" : s === "bad" ? "needs action" : "unknown"}">${s === "ok" ? "✓" : s === "bad" ? "!" : "?"}</span><div><b>${t}</b><p>${p}</p></div></li>`).join("");
+  }
+
+  function toast(msg, kind = "bad") { const t = $("toast"); t.className = `toast ${kind}`; t.textContent = msg; t.hidden = !msg; }
+
+  async function load() {
+    toast("");
+    if (!conn.token) { data = demoData(); render(); return; }
+    $("refreshBtn").disabled = true;
+    try {
+      data = await loadLive(); render();
+    } catch (e) {
+      const hint = e.status === 401 ? "The token was rejected. It may have expired; create a new one and connect again."
+        : e.status === 404 ? `Couldn’t find ${conn.repo}. Check the name, and that the token has access to this repo.`
+        : e.status === 403 ? "GitHub refused the request. The token may be missing a permission, or you hit the API rate limit."
+        : `Couldn’t reach GitHub (${e.message}).`;
+      toast(hint);
+      if (!data) { data = demoData(); render(); }
+    } finally { $("refreshBtn").disabled = false; }
+  }
+
+  /* ---------- events ---------- */
+  $("refreshBtn").onclick = load;
+  $("moreBtn").onclick = () => { showAll = !showAll; render(); };
+  $("connectBtn").onclick = () => {
+    $("repoInput").value = conn.repo; $("tokenInput").value = conn.token;
+    $("rememberInput").checked = (() => { try { return !!localStorage.getItem("lw.token"); } catch { return false; } })();
+    $("connectPanel").hidden = false; $("repoInput").focus();
+  };
+  $("cancelConnect").onclick = () => { $("connectPanel").hidden = true; };
+  $("forgetConnect").onclick = () => { store.del("lw.token"); store.del("lw.repo"); conn = { repo: DEFAULT_REPO, token: "" }; $("connectPanel").hidden = true; load(); };
+  $("saveConnect").onclick = () => {
+    const repo = $("repoInput").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "");
+    const token = $("tokenInput").value.trim();
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { toast("Enter the repo as owner/name, for example mavusosesikho40-eng/gbp-monitor."); return; }
+    if (!token) { toast("Paste a GitHub token to connect."); return; }
+    const remember = $("rememberInput").checked;
+    store.set("lw.repo", repo, remember); store.set("lw.token", token, remember);
+    conn = { repo, token }; data = null; $("connectPanel").hidden = true; load();
+  };
+  $("runBtn").onclick = async () => {
+    if (!data || data.demo || !data.workflow) return;
+    $("runBtn").disabled = true;
+    try {
+      await gh(`/repos/${conn.repo}/actions/workflows/${data.workflow.id}/dispatches`, { method: "POST", body: { ref: data.defaultBranch } });
+      toast("Check started. Results usually appear within a minute; press Refresh.", "ok");
+      setTimeout(load, 20000);
+    } catch (e) {
+      toast(e.status === 403 ? "This token can’t start runs. Give it Actions: write permission." : `Couldn’t start the check (${e.message}).`);
+    } finally { $("runBtn").disabled = false; }
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>
