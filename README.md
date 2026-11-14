@@ -4,7 +4,7 @@ A dashboard for [gbp-monitor](https://github.com/mavusosesikho40-eng/gbp-monitor
 
 It has two views, switched at the top of the page:
 
-- **Restaurant**: for the owner and staff. A plain answer ("Your listing is safe" or "Your Google listing was changed"), the time until the next check, the approved name, phone, website and address, and step-by-step instructions when something changes.
+- **Restaurant**: for the owner and staff. A plain answer ("Your listing is safe" or "Your Google listing was changed"), the time until the next check, the approved name, phone, website, address and open status, and step-by-step instructions when something changes. It also flags suggested edits that Google has published, and a listing shown as closed.
 - **Operator**: for whoever runs the monitor. Status, setup progress (workflow, secrets, baseline, first check), recent GitHub Actions runs, the full check log with before/after values, a "Run check now" button, and the GitHub connection.
 
 Link straight to a view with `#restaurant` or `#operator` at the end of the URL. Without a connection the page shows example data, and you can preview the "listing changed" and "not set up" states.

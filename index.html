@@ -190,6 +190,8 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       <select id="scenario">
         <option value="ok">Everything fine</option>
         <option value="changed">Listing changed</option>
+        <option value="suggested">Suggested edit live on Google</option>
+        <option value="closed">Shown as closed on Google</option>
         <option value="setup">Not set up yet</option>
       </select>
     </label>
@@ -224,7 +226,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       <h2 style="color:var(--ink)">What to do now</h2>
       <ol class="steps">
         <li><div><b>Open Google Business Profile</b><div class="muted">Sign in with the account that manages your restaurant.</div></div></li>
-        <li><div><b>Put back the correct details</b><div class="muted">Use the “Approved” values above. If you can’t edit the listing, use “Get support” in Business Profile and report it.</div></div></li>
+        <li><div><b>Put back the correct details</b><div class="muted">Use the “Approved” or “Your listing” values above. If Google is showing a suggested edit, reject it. If you can’t edit the listing, use “Get support” in Business Profile and report it.</div></div></li>
         <li><div><b>Tell your operator</b><div class="muted">If you made the change on purpose, they need to save it as the new approved version.</div></div></li>
       </ol>
       <div class="btn-row"><a class="btn" href="https://business.google.com/" target="_blank" rel="noopener">Open Google Business Profile</a></div>
@@ -309,8 +311,10 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
   const DEFAULT_REPO = "mavusosesikho40-eng/gbp-monitor";
   const CRON_HOURS_UTC = [6, 18];
   const STALE_HOURS = 13;
-  const FIELD_LABELS = { title: "Name", phoneNumbers: "Phone", websiteUri: "Website", storefrontAddress: "Address" };
-  const FIELDS = Object.keys(FIELD_LABELS);
+  const FIELD_LABELS = { title: "Name", phoneNumbers: "Phone", websiteUri: "Website", storefrontAddress: "Address", openInfo: "Open status", googleUpdates: "Other updates" };
+  const FIELDS = ["title", "phoneNumbers", "websiteUri", "storefrontAddress", "openInfo"];
+  const OPEN_LABELS = { OPEN: "Open", CLOSED_TEMPORARILY: "Temporarily closed", CLOSED_PERMANENTLY: "Permanently closed" };
+  const UPDATED_NAMES = { regularHours: "opening hours", specialHours: "holiday hours", moreHours: "extra hours", categories: "categories", profile: "description", serviceItems: "services", serviceArea: "service area", adWordsLocationExtensions: "ad phone number", latlng: "map position" };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -330,7 +334,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3"/>',
   };
   const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
-  const FIELD_ICON = { title: "store", phoneNumbers: "phone", websiteUri: "globe", storefrontAddress: "pin" };
+  const FIELD_ICON = { title: "store", phoneNumbers: "phone", websiteUri: "globe", storefrontAddress: "pin", openInfo: "clock" };
 
   /* ---------- storage ---------- */
   const store = {
@@ -346,7 +350,12 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
 
   /* ---------- formatting ---------- */
   function fmtField(field, v) {
+    if (field === "googleUpdates") {
+      const names = (v || []).map((x) => UPDATED_NAMES[x] || x);
+      return names.length ? "Waiting for your review: " + names.join(", ") : "Google has updates waiting for your review";
+    }
     if (v == null || v === "") return "Not set";
+    if (field === "openInfo") return OPEN_LABELS[v.status] || String(v.status);
     if (field === "phoneNumbers") return [v.primaryPhone, ...(v.additionalPhones || [])].filter(Boolean).join(", ") || "Not set";
     if (field === "storefrontAddress") return [...(v.addressLines || []), v.sublocality, v.locality, v.administrativeArea, v.postalCode, v.regionCode].filter(Boolean).join(", ") || "Not set";
     return typeof v === "string" ? v : JSON.stringify(v);
@@ -391,15 +400,18 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       phoneNumbers: { primaryPhone: "+27 11 555 0142" },
       websiteUri: "https://bistro.example",
       storefrontAddress: { addressLines: ["12 Example Street"], locality: "Johannesburg", administrativeArea: "Gauteng", postalCode: "2001", regionCode: "ZA" },
+      openInfo: { status: "OPEN" },
     };
     const last = nextRun(new Date(now - 12 * H));
     const log = [];
     for (let i = 0; i < 28; i++) {
       const t = new Date(last.getTime() - i * 12 * H + (4 + (i * 7) % 11) * 60e3);
       let changes = [];
-      if (i === 5) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://bistro-bookings.example.net" }];
-      if (kind === "changed" && i === 0) changes = [{ field: "phoneNumbers", was: baseline.phoneNumbers, now: { primaryPhone: "+27 82 555 0199" } }];
-      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes });
+      if (i === 5) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://bistro-bookings.example.net", source: "merchant" }];
+      if (kind === "changed" && i === 0) changes = [{ field: "phoneNumbers", was: baseline.phoneNumbers, now: { primaryPhone: "+27 82 555 0199" }, source: "merchant" }];
+      if (kind === "suggested" && i === 0) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://bistro-bookings.example.net", source: "public" }];
+      if (kind === "closed" && i === 0) changes = [{ field: "openInfo", was: { status: "OPEN" }, now: { status: "CLOSED_PERMANENTLY" }, source: "public" }];
+      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes, public_check: "ok" });
     }
     log.reverse();
     const runs = log.slice(-8).reverse().map((e, i) => ({
@@ -468,24 +480,33 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     if (!lastLog) return { kind: "waiting", s: "idle", title: "Waiting for the first check", text: "Setup is complete. Results appear after the next run." };
     if ((Date.now() - new Date(lastLog.timestamp)) / 3600e3 > STALE_HOURS) return { kind: "stale", s: "warn", title: "No recent checks",
       text: `The last check was ${rel(lastLog.timestamp)}. Make sure the workflow is enabled in the Actions tab. GitHub pauses schedules after 60 days without repo activity.` };
+    if (lastLog.public_check === "failed") return { kind: "partial", s: "warn", title: "Customer view not checked",
+      text: "The owner copy matches, but the last run could not read what customers see on Google Maps. A suggested edit would be missed until this is fixed. Check the Google sign-in and API access." };
     return { kind: "ok", s: "ok", title: "All clear", text: "The live listing matches the approved one." };
   }
-  function forRestaurant(st) {
+  function forRestaurant(st, d) {
+    const last = d.log[d.log.length - 1];
+    const closed = st.kind === "changed" && (last?.changes || []).some((c) => c.field === "openInfo" && c.now && c.now.status && c.now.status !== "OPEN");
+    if (closed) return { s: "bad", icon: "alert", title: "Google shows your restaurant as closed", text: "Customers searching for you may see it as closed. If that’s wrong, fix it now so they can still find and book you." };
     switch (st.kind) {
-      case "ok": return { s: "ok", icon: "check", title: "Your listing is safe", text: "Your name, phone, website and address on Google match what you approved." };
+      case "ok": return { s: "ok", icon: "check", title: "Your listing is safe", text: "Your name, phone, website, address and open status on Google match what you approved." };
       case "changed": return { s: "bad", icon: "alert", title: "Your Google listing was changed", text: "Details customers see on Google are different from what you approved. If you didn’t make this change, fix it now." };
       case "running": return { s: "idle", icon: "clock", title: "Checking your listing", text: "This takes about a minute." };
       case "waiting": return { s: "idle", icon: "clock", title: "Protection starts soon", text: `The first check runs ${nextText(nextRun())}.` };
+      case "partial": return { s: "warn", icon: "alert", title: "We couldn’t fully check your listing", text: "Your details match, but we couldn’t check what customers see on Google Maps this time. Your operator is looking into it." };
       default: return { s: "warn", icon: "pause", title: "Checks are paused", text: "Your listing isn’t being watched right now. Your operator needs to fix this.", operator: true };
     }
   }
 
   /* ---------- render ---------- */
   let data = null, showAllR = false, showAllO = false;
+  const diffLine = (c) => c.field === "googleUpdates"
+    ? `<div><b>${esc(FIELD_LABELS[c.field])}:</b> ${esc(fmtField(c.field, c.now))}</div>`
+    : `<div><b>${esc(FIELD_LABELS[c.field] || c.field)}${c.source === "public" ? " (customers see)" : ""}:</b> <s>${esc(fmtField(c.field, c.was))}</s> → ${esc(fmtField(c.field, c.now))}</div>`;
   const emptyRow = (ic, v, k) => `<li><span class="ico">${icon(ic)}</span><div><div class="v">${v}</div><div class="k">${k}</div></div><span></span></li>`;
 
   function renderRestaurant(d, st) {
-    const r = forRestaurant(st);
+    const r = forRestaurant(st, d);
     $("rHero").dataset.s = r.s;
     $("rBadge").innerHTML = icon(r.icon);
     $("rTitle").textContent = r.title;
@@ -505,12 +526,16 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
 
     const changed = st.kind === "changed" ? lastLog.changes : [];
     $("rChange").hidden = !changed.length;
-    $("rCmp").innerHTML = changed.map((c) => `<div class="f"><div class="lab">${esc(FIELD_LABELS[c.field] || c.field)}</div>
-      <div class="pair"><span>Approved</span><span class="was">${esc(fmtField(c.field, c.was))}</span><span>Now on Google</span><span class="now">${esc(fmtField(c.field, c.now))}</span></div></div>`).join("");
+    $("rCmp").innerHTML = changed.map((c) => {
+      const lab = esc(FIELD_LABELS[c.field] || c.field);
+      if (c.field === "googleUpdates") return `<div class="f"><div class="lab">${lab}</div><div class="pair"><span>Details</span><span class="now">${esc(fmtField(c.field, c.now))}</span></div></div>`;
+      const [a, b] = c.source === "public" ? ["Your listing", "Customers see"] : ["Approved", "Now on Google"];
+      return `<div class="f"><div class="lab">${lab}</div><div class="pair"><span>${a}</span><span class="was">${esc(fmtField(c.field, c.was))}</span><span>${b}</span><span class="now">${esc(fmtField(c.field, c.now))}</span></div></div>`;
+    }).join("");
 
     const changedFields = new Set(changed.map((c) => c.field));
     $("rFields").innerHTML = d.baseline && !d.baseline._invalid ? FIELDS.map((f) => `<li><span class="ico">${icon(FIELD_ICON[f])}</span>
-        <div><div class="k">${FIELD_LABELS[f]}</div><div class="v">${esc(fmtField(f, d.baseline[f]))}</div></div>
+        <div><div class="k">${FIELD_LABELS[f]}</div><div class="v">${f in d.baseline ? esc(fmtField(f, d.baseline[f])) : "Not watched yet"}</div></div>
         ${changedFields.has(f) ? '<span class="tag" data-s="bad">Changed</span>' : st.kind === "ok" ? '<span class="tag" data-s="ok">Matches</span>' : "<span></span>"}</li>`).join("")
       : emptyRow("q", "Not saved yet", "Your operator records your approved details during setup.");
 
@@ -574,7 +599,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     $("logCount").textContent = entries.length ? `${entries.length} entries` : "";
     $("log").innerHTML = vis.length ? vis.map((e) => { const bad = e.status === "changed";
       return `<li><span class="ico" style="color:var(--${bad ? "bad" : "ok"})">${icon(bad ? "alert" : "check")}</span>
-        <div><div class="v">${esc(fmtDT(e.timestamp))}</div>${bad ? `<div class="log-diff">${e.changes.map((c) => `<div><b>${esc(FIELD_LABELS[c.field] || c.field)}:</b> <s>${esc(fmtField(c.field, c.was))}</s> → ${esc(fmtField(c.field, c.now))}</div>`).join("")}</div>` : '<div class="k">No changes</div>'}</div>
+        <div><div class="v">${esc(fmtDT(e.timestamp))}</div>${bad ? `<div class="log-diff">${e.changes.map(diffLine).join("")}</div>` : '<div class="k">No changes</div>'}</div>
         <span class="tag" data-s="${bad ? "bad" : "ok"}">${bad ? "Changed" : "OK"}</span></li>`; }).join("")
       : emptyRow("clock", "Nothing logged yet", "Each run adds a line to change_log.jsonl.");
     $("logMore").hidden = entries.length <= 8;
