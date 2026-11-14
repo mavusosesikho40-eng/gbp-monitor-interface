@@ -192,6 +192,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
         <option value="changed">Listing changed</option>
         <option value="suggested">Suggested edit live on Google</option>
         <option value="closed">Shown as closed on Google</option>
+        <option value="booking">Booking link changed</option>
         <option value="setup">Not set up yet</option>
       </select>
     </label>
@@ -314,6 +315,16 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
   const FIELD_LABELS = { title: "Name", phoneNumbers: "Phone", websiteUri: "Website", storefrontAddress: "Address", openInfo: "Open status", googleUpdates: "Other updates" };
   const FIELDS = ["title", "phoneNumbers", "websiteUri", "storefrontAddress", "openInfo"];
   const OPEN_LABELS = { OPEN: "Open", CLOSED_TEMPORARILY: "Temporarily closed", CLOSED_PERMANENTLY: "Permanently closed" };
+  const LINK_LABELS = { DINING_RESERVATION: "Reservation link", FOOD_ORDERING: "Order online link", FOOD_DELIVERY: "Delivery link", FOOD_TAKEOUT: "Takeout link", APPOINTMENT: "Appointment link", ONLINE_APPOINTMENT: "Online appointment link", SOLOPRENEUR_APPOINTMENT: "Appointment link", SHOP_ONLINE: "Online shop link" };
+  function linkLabel(kind) {
+    if (LINK_LABELS[kind]) return LINK_LABELS[kind];
+    let name = String(kind).split("/").pop();
+    if (name.startsWith("url_")) name = name.slice(4);
+    name = name.replace(/_/g, " ");
+    return name.charAt(0).toUpperCase() + name.slice(1) + " link";
+  }
+  const changeLabel = (c) => (c.field === "links" ? linkLabel(c.kind) : FIELD_LABELS[c.field] || c.field);
+  const fmtLinks = (list) => (list && list.length ? list.map((r) => r.uri + (r.preferred ? " (preferred)" : "") + (r.disabled ? " (disabled)" : "")).join(", ") : "None");
   const UPDATED_NAMES = { regularHours: "opening hours", specialHours: "holiday hours", moreHours: "extra hours", categories: "categories", profile: "description", serviceItems: "services", serviceArea: "service area", adWordsLocationExtensions: "ad phone number", latlng: "map position" };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -350,6 +361,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
 
   /* ---------- formatting ---------- */
   function fmtField(field, v) {
+    if (field === "links") return fmtLinks(v);
     if (field === "googleUpdates") {
       const names = (v || []).map((x) => UPDATED_NAMES[x] || x);
       return names.length ? "Waiting for your review: " + names.join(", ") : "Google has updates waiting for your review";
@@ -401,6 +413,10 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       websiteUri: "https://bistro.example",
       storefrontAddress: { addressLines: ["12 Example Street"], locality: "Johannesburg", administrativeArea: "Gauteng", postalCode: "2001", regionCode: "ZA" },
       openInfo: { status: "OPEN" },
+      links: [
+        { kind: "DINING_RESERVATION", uri: "https://bistro.example/book", preferred: true, provider: "MERCHANT", disabled: false },
+        { kind: "attributes/url_menu", uri: "https://bistro.example/menu" },
+      ],
     };
     const last = nextRun(new Date(now - 12 * H));
     const log = [];
@@ -411,7 +427,8 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       if (kind === "changed" && i === 0) changes = [{ field: "phoneNumbers", was: baseline.phoneNumbers, now: { primaryPhone: "+27 82 555 0199" }, source: "merchant" }];
       if (kind === "suggested" && i === 0) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://bistro-bookings.example.net", source: "public" }];
       if (kind === "closed" && i === 0) changes = [{ field: "openInfo", was: { status: "OPEN" }, now: { status: "CLOSED_PERMANENTLY" }, source: "public" }];
-      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes, public_check: "ok" });
+      if (kind === "booking" && i === 0) changes = [{ field: "links", kind: "DINING_RESERVATION", was: [baseline.links[0]], now: [{ ...baseline.links[0], uri: "https://bistro-bookings.example.net/pay" }], source: "merchant" }];
+      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes, public_check: "ok", links_check: "ok" });
     }
     log.reverse();
     const runs = log.slice(-8).reverse().map((e, i) => ({
@@ -480,8 +497,9 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     if (!lastLog) return { kind: "waiting", s: "idle", title: "Waiting for the first check", text: "Setup is complete. Results appear after the next run." };
     if ((Date.now() - new Date(lastLog.timestamp)) / 3600e3 > STALE_HOURS) return { kind: "stale", s: "warn", title: "No recent checks",
       text: `The last check was ${rel(lastLog.timestamp)}. Make sure the workflow is enabled in the Actions tab. GitHub pauses schedules after 60 days without repo activity.` };
-    if (lastLog.public_check === "failed") return { kind: "partial", s: "warn", title: "Customer view not checked",
-      text: "The owner copy matches, but the last run could not read what customers see on Google Maps. A suggested edit would be missed until this is fixed. Check the Google sign-in and API access." };
+    const skipped = [lastLog.public_check === "failed" && "what customers see on Google Maps", lastLog.links_check === "failed" && "booking and menu links"].filter(Boolean);
+    if (skipped.length) return { kind: "partial", s: "warn", title: "Not fully checked",
+      text: `The owner copy matches, but the last run could not check ${skipped.join(" or ")}. Changes there would be missed until this is fixed. Check the Google sign-in and API access, and that the Place Actions API is enabled.` };
     return { kind: "ok", s: "ok", title: "All clear", text: "The live listing matches the approved one." };
   }
   function forRestaurant(st, d) {
@@ -493,7 +511,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       case "changed": return { s: "bad", icon: "alert", title: "Your Google listing was changed", text: "Details customers see on Google are different from what you approved. If you didn’t make this change, fix it now." };
       case "running": return { s: "idle", icon: "clock", title: "Checking your listing", text: "This takes about a minute." };
       case "waiting": return { s: "idle", icon: "clock", title: "Protection starts soon", text: `The first check runs ${nextText(nextRun())}.` };
-      case "partial": return { s: "warn", icon: "alert", title: "We couldn’t fully check your listing", text: "Your details match, but we couldn’t check what customers see on Google Maps this time. Your operator is looking into it." };
+      case "partial": return { s: "warn", icon: "alert", title: "We couldn’t fully check your listing", text: "Your details match, but we couldn’t check everything this time. Your operator is looking into it." };
       default: return { s: "warn", icon: "pause", title: "Checks are paused", text: "Your listing isn’t being watched right now. Your operator needs to fix this.", operator: true };
     }
   }
@@ -502,7 +520,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
   let data = null, showAllR = false, showAllO = false;
   const diffLine = (c) => c.field === "googleUpdates"
     ? `<div><b>${esc(FIELD_LABELS[c.field])}:</b> ${esc(fmtField(c.field, c.now))}</div>`
-    : `<div><b>${esc(FIELD_LABELS[c.field] || c.field)}${c.source === "public" ? " (customers see)" : ""}:</b> <s>${esc(fmtField(c.field, c.was))}</s> → ${esc(fmtField(c.field, c.now))}</div>`;
+    : `<div><b>${esc(changeLabel(c))}${c.source === "public" ? " (customers see)" : ""}:</b> <s>${esc(fmtField(c.field, c.was))}</s> → ${esc(fmtField(c.field, c.now))}</div>`;
   const emptyRow = (ic, v, k) => `<li><span class="ico">${icon(ic)}</span><div><div class="v">${v}</div><div class="k">${k}</div></div><span></span></li>`;
 
   function renderRestaurant(d, st) {
@@ -527,16 +545,25 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     const changed = st.kind === "changed" ? lastLog.changes : [];
     $("rChange").hidden = !changed.length;
     $("rCmp").innerHTML = changed.map((c) => {
-      const lab = esc(FIELD_LABELS[c.field] || c.field);
+      const lab = esc(changeLabel(c));
       if (c.field === "googleUpdates") return `<div class="f"><div class="lab">${lab}</div><div class="pair"><span>Details</span><span class="now">${esc(fmtField(c.field, c.now))}</span></div></div>`;
       const [a, b] = c.source === "public" ? ["Your listing", "Customers see"] : ["Approved", "Now on Google"];
       return `<div class="f"><div class="lab">${lab}</div><div class="pair"><span>${a}</span><span class="was">${esc(fmtField(c.field, c.was))}</span><span>${b}</span><span class="now">${esc(fmtField(c.field, c.now))}</span></div></div>`;
     }).join("");
 
-    const changedFields = new Set(changed.map((c) => c.field));
-    $("rFields").innerHTML = d.baseline && !d.baseline._invalid ? FIELDS.map((f) => `<li><span class="ico">${icon(FIELD_ICON[f])}</span>
-        <div><div class="k">${FIELD_LABELS[f]}</div><div class="v">${f in d.baseline ? esc(fmtField(f, d.baseline[f])) : "Not watched yet"}</div></div>
-        ${changedFields.has(f) ? '<span class="tag" data-s="bad">Changed</span>' : st.kind === "ok" ? '<span class="tag" data-s="ok">Matches</span>' : "<span></span>"}</li>`).join("")
+    const changedFields = new Set(changed.filter((c) => c.field !== "links").map((c) => c.field));
+    const changedLinks = new Set(changed.filter((c) => c.field === "links").map((c) => c.kind));
+    const tagFor = (isChanged) => (isChanged ? '<span class="tag" data-s="bad">Changed</span>' : st.kind === "ok" ? '<span class="tag" data-s="ok">Matches</span>' : "<span></span>");
+    const row = (ic, label, value, isChanged) => `<li><span class="ico">${icon(ic)}</span><div><div class="k">${esc(label)}</div><div class="v">${value}</div></div>${tagFor(isChanged)}</li>`;
+    const okBaseline = d.baseline && !d.baseline._invalid;
+    const approvedLinks = okBaseline && Array.isArray(d.baseline.links) ? d.baseline.links : null;
+    const linkKinds = approvedLinks ? [...new Set([...approvedLinks.map((r) => r.kind), ...changedLinks])].sort() : [];
+    $("rFields").innerHTML = okBaseline
+      ? FIELDS.map((f) => row(FIELD_ICON[f], FIELD_LABELS[f], f in d.baseline ? esc(fmtField(f, d.baseline[f])) : "Not watched yet", changedFields.has(f))).join("")
+        + (approvedLinks
+          ? (linkKinds.length ? linkKinds.map((k) => row("globe", linkLabel(k), esc(fmtLinks(approvedLinks.filter((r) => r.kind === k))), changedLinks.has(k))).join("")
+            : row("globe", "Booking and menu links", "None saved", false))
+          : row("globe", "Booking and menu links", "Not watched yet", false))
       : emptyRow("q", "Not saved yet", "Your operator records your approved details during setup.");
 
     const entries = d.log.slice().reverse();
@@ -547,7 +574,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       lastDay = day;
       const bad = e.status === "changed";
       return head + `<li><span class="ico" style="color:var(--${bad ? "bad" : "ok"})">${icon(bad ? "alert" : "check")}</span>
-        <div><div class="v">${bad ? `${esc(e.changes.map((c) => FIELD_LABELS[c.field] || c.field).join(", "))} changed` : "Checked, no changes"}</div><div class="k">${esc(fmtTime(e.timestamp))}</div></div><span></span></li>`;
+        <div><div class="v">${bad ? `${esc(e.changes.map((c) => changeLabel(c)).join(", "))} changed` : "Checked, no changes"}</div><div class="k">${esc(fmtTime(e.timestamp))}</div></div><span></span></li>`;
     }).join("") : emptyRow("clock", "No checks yet", "Each check will show up here.");
     $("rMore").hidden = entries.length <= 6;
     $("rMore").textContent = showAllR ? "Show less" : "See all";
