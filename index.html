@@ -193,6 +193,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
         <option value="suggested">Suggested edit live on Google</option>
         <option value="closed">Shown as closed on Google</option>
         <option value="booking">Booking link changed</option>
+        <option value="access">New owner invited</option>
         <option value="setup">Not set up yet</option>
       </select>
     </label>
@@ -227,7 +228,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       <h2 style="color:var(--ink)">What to do now</h2>
       <ol class="steps">
         <li><div><b>Open Google Business Profile</b><div class="muted">Sign in with the account that manages your restaurant.</div></div></li>
-        <li><div><b>Put back the correct details</b><div class="muted">Use the “Approved” or “Your listing” values above. If Google is showing a suggested edit, reject it. If you can’t edit the listing, use “Get support” in Business Profile and report it.</div></div></li>
+        <li><div><b>Put back the correct details</b><div class="muted">Use the “Approved” or “Your listing” values above. If Google is showing a suggested edit, reject it. If someone you don’t know has access, remove them under Settings, then People and access. If you can’t edit the listing, use “Get support” in Business Profile and report it.</div></div></li>
         <li><div><b>Tell your operator</b><div class="muted">If you made the change on purpose, they need to save it as the new approved version.</div></div></li>
       </ol>
       <div class="btn-row"><a class="btn" href="https://business.google.com/" target="_blank" rel="noopener">Open Google Business Profile</a></div>
@@ -237,6 +238,12 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       <div class="section-head"><h2 id="rDetailsH">Your approved details</h2></div>
       <p class="muted" style="margin-bottom:6px">Every check compares your Google listing against these.</p>
       <ul class="rows" id="rFields"></ul>
+    </section>
+
+    <section aria-labelledby="rPeopleH">
+      <div class="section-head"><h2 id="rPeopleH">People with access</h2></div>
+      <p class="muted" style="margin-bottom:6px">Owners and managers on your Google listing. Anyone new shows up as a change.</p>
+      <ul class="rows" id="rPeople"></ul>
     </section>
 
     <section aria-labelledby="rActH">
@@ -323,7 +330,19 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     name = name.replace(/_/g, " ");
     return name.charAt(0).toUpperCase() + name.slice(1) + " link";
   }
-  const changeLabel = (c) => (c.field === "links" ? linkLabel(c.kind) : FIELD_LABELS[c.field] || c.field);
+  const ROLE_NAMES = { PRIMARY_OWNER: "primary owner", OWNER: "owner", MANAGER: "manager", SITE_MANAGER: "site manager" };
+  const roleName = (r) => ROLE_NAMES[r.role] || "admin";
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const fmtAdmin = (r) => (r ? `${r.admin || r.name} (${roleName(r)}${r.pending ? ", invitation pending" : ""})` : "(not on the list)");
+  const changeLabel = (c) => {
+    if (c.field === "links") return linkLabel(c.kind);
+    if (c.field === "admins") {
+      if (!c.was) return "New " + roleName(c.now);
+      if (!c.now) return cap(roleName(c.was)) + " removed";
+      return c.was.role !== c.now.role ? "Access role changed" : "Invitation accepted";
+    }
+    return FIELD_LABELS[c.field] || c.field;
+  };
   const fmtLinks = (list) => (list && list.length ? list.map((r) => r.uri + (r.preferred ? " (preferred)" : "") + (r.disabled ? " (disabled)" : "")).join(", ") : "None");
   const UPDATED_NAMES = { regularHours: "opening hours", specialHours: "holiday hours", moreHours: "extra hours", categories: "categories", profile: "description", serviceItems: "services", serviceArea: "service area", adWordsLocationExtensions: "ad phone number", latlng: "map position" };
   const $ = (id) => document.getElementById(id);
@@ -344,6 +363,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     repo: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z"/><path d="M5 17a3 3 0 0 1 3-3h11"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3"/>',
   };
+  P.user = '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>';
   const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
   const FIELD_ICON = { title: "store", phoneNumbers: "phone", websiteUri: "globe", storefrontAddress: "pin", openInfo: "clock" };
 
@@ -362,6 +382,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
   /* ---------- formatting ---------- */
   function fmtField(field, v) {
     if (field === "links") return fmtLinks(v);
+    if (field === "admins") return fmtAdmin(v);
     if (field === "googleUpdates") {
       const names = (v || []).map((x) => UPDATED_NAMES[x] || x);
       return names.length ? "Waiting for your review: " + names.join(", ") : "Google has updates waiting for your review";
@@ -417,6 +438,11 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
         { kind: "DINING_RESERVATION", uri: "https://bistro.example/book", preferred: true, provider: "MERCHANT", disabled: false },
         { kind: "attributes/url_menu", uri: "https://bistro.example/menu" },
       ],
+      admins: [
+        { scope: "location", name: "locations/456/admins/1", admin: "Alex Example", role: "PRIMARY_OWNER", pending: false },
+        { scope: "location", name: "locations/456/admins/2", admin: "Sam Example", role: "MANAGER", pending: false },
+      ],
+      adminScopes: ["location"],
     };
     const last = nextRun(new Date(now - 12 * H));
     const log = [];
@@ -428,7 +454,8 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
       if (kind === "suggested" && i === 0) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://bistro-bookings.example.net", source: "public" }];
       if (kind === "closed" && i === 0) changes = [{ field: "openInfo", was: { status: "OPEN" }, now: { status: "CLOSED_PERMANENTLY" }, source: "public" }];
       if (kind === "booking" && i === 0) changes = [{ field: "links", kind: "DINING_RESERVATION", was: [baseline.links[0]], now: [{ ...baseline.links[0], uri: "https://bistro-bookings.example.net/pay" }], source: "merchant" }];
-      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes, public_check: "ok", links_check: "ok" });
+      if (kind === "access" && i === 0) changes = [{ field: "admins", was: null, now: { scope: "location", name: "locations/456/admins/9", admin: "jordan@example.net", role: "OWNER", pending: true }, source: "merchant" }];
+      log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes, public_check: "ok", links_check: "ok", admins_check: "ok" });
     }
     log.reverse();
     const runs = log.slice(-8).reverse().map((e, i) => ({
@@ -497,14 +524,16 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     if (!lastLog) return { kind: "waiting", s: "idle", title: "Waiting for the first check", text: "Setup is complete. Results appear after the next run." };
     if ((Date.now() - new Date(lastLog.timestamp)) / 3600e3 > STALE_HOURS) return { kind: "stale", s: "warn", title: "No recent checks",
       text: `The last check was ${rel(lastLog.timestamp)}. Make sure the workflow is enabled in the Actions tab. GitHub pauses schedules after 60 days without repo activity.` };
-    const skipped = [lastLog.public_check === "failed" && "what customers see on Google Maps", lastLog.links_check === "failed" && "booking and menu links"].filter(Boolean);
+    const skipped = [lastLog.public_check === "failed" && "what customers see on Google Maps", lastLog.links_check === "failed" && "booking and menu links", lastLog.admins_check === "failed" && "who has access to the listing"].filter(Boolean);
     if (skipped.length) return { kind: "partial", s: "warn", title: "Not fully checked",
-      text: `The owner copy matches, but the last run could not check ${skipped.join(" or ")}. Changes there would be missed until this is fixed. Check the Google sign-in and API access, and that the Place Actions API is enabled.` };
+      text: `The owner copy matches, but the last run could not check ${skipped.join(" or ")}. Changes there would be missed until this is fixed. Check the Google sign-in and API access, and that the Place Actions and Account Management APIs are enabled.` };
     return { kind: "ok", s: "ok", title: "All clear", text: "The live listing matches the approved one." };
   }
   function forRestaurant(st, d) {
     const last = d.log[d.log.length - 1];
     const closed = st.kind === "changed" && (last?.changes || []).some((c) => c.field === "openInfo" && c.now && c.now.status && c.now.status !== "OPEN");
+    const gotAccess = st.kind === "changed" && (last?.changes || []).some((c) => c.field === "admins" && c.now && ["OWNER", "PRIMARY_OWNER"].includes(c.now.role) && (!c.was || c.was.role !== c.now.role));
+    if (gotAccess) return { s: "bad", icon: "alert", title: "Someone new has owner access to your listing", text: "A new owner, or a higher access level, appeared on your Google listing. If you don’t recognise them, remove their access now." };
     if (closed) return { s: "bad", icon: "alert", title: "Google shows your restaurant as closed", text: "Customers searching for you may see it as closed. If that’s wrong, fix it now so they can still find and book you." };
     switch (st.kind) {
       case "ok": return { s: "ok", icon: "check", title: "Your listing is safe", text: "Your name, phone, website, address and open status on Google match what you approved." };
@@ -565,6 +594,14 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
             : row("globe", "Booking and menu links", "None saved", false))
           : row("globe", "Booking and menu links", "Not watched yet", false))
       : emptyRow("q", "Not saved yet", "Your operator records your approved details during setup.");
+
+    const people = okBaseline && Array.isArray(d.baseline.admins) ? d.baseline.admins : null;
+    const changedPeople = new Set(changed.filter((c) => c.field === "admins").map((c) => (c.was || c.now).name));
+    $("rPeople").innerHTML = people
+      ? (people.length
+        ? people.map((r) => `<li><span class="ico">${icon("user")}</span><div><div class="k">${esc(cap(roleName(r)))}</div><div class="v">${esc((r.admin || r.name) + (r.pending ? " (invitation pending)" : ""))}</div></div>${tagFor(changedPeople.has(r.name))}</li>`).join("")
+        : emptyRow("user", "No one listed", "Google returned no owners or managers."))
+      : emptyRow("q", "Not watched yet", "Your operator saves who has access during setup.");
 
     const entries = d.log.slice().reverse();
     const vis = showAllR ? entries : entries.slice(0, 6);
