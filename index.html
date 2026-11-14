@@ -387,9 +387,9 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
   function demoData(kind) {
     const now = Date.now(), H = 3600e3;
     const baseline = {
-      title: "VLAMO Restaurant",
+      title: "Example Bistro",
       phoneNumbers: { primaryPhone: "+27 11 555 0142" },
-      websiteUri: "https://vlamo.example",
+      websiteUri: "https://bistro.example",
       storefrontAddress: { addressLines: ["12 Example Street"], locality: "Johannesburg", administrativeArea: "Gauteng", postalCode: "2001", regionCode: "ZA" },
     };
     const last = nextRun(new Date(now - 12 * H));
@@ -397,7 +397,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
     for (let i = 0; i < 28; i++) {
       const t = new Date(last.getTime() - i * 12 * H + (4 + (i * 7) % 11) * 60e3);
       let changes = [];
-      if (i === 5) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://vlamo-bookings.example.net" }];
+      if (i === 5) changes = [{ field: "websiteUri", was: baseline.websiteUri, now: "https://bistro-bookings.example.net" }];
       if (kind === "changed" && i === 0) changes = [{ field: "phoneNumbers", was: baseline.phoneNumbers, now: { primaryPhone: "+27 82 555 0199" } }];
       log.push({ timestamp: t.toISOString(), status: changes.length ? "changed" : "ok", changes });
     }
